@@ -147,7 +147,6 @@ export const Sidebar: React.FC = () => {
                     <span className="logo-text">{role.includes('VENDOR') ? 'Vendor' : 'Admin'}</span>
                 </div>
             </div>
-
             <nav className="sidebar-nav">
                 {visibleGroups.map((group) => {
                     if (!group) return null;
