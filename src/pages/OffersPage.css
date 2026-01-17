@@ -1,0 +1,327 @@
+.offers-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 5rem; /* Space for FAB */
+  position: relative;
+}
+
+/* Stats Row */
+.offer-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .offer-stats-row {
+    grid-template-columns: 1fr;
+    /* Optional: To make it scrollable horizontally on mobile like in screenshot? 
+       Prompt said "Filters must be horizontally scrollable", didn't specify stats.
+       Let's stick to grid for stats. */
+  }
+}
+
+.offer-stat-card {
+  background: var(--color-card-bg); /* Use base card bg, slightly darker than glass sometimes */
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.offer-stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.offer-stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.offer-stat-trend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.trend-up { color: var(--color-success); }
+.trend-down { color: var(--color-danger); }
+
+/* Search & Filter */
+.offers-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.offer-search-input {
+  width: 100%;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg); /* Slightly less rounded than full pill according to screenshot look */
+  padding: 0.85rem 1rem 0.85rem 3rem;
+  color: white;
+  font-size: 1rem;
+  outline: none;
+}
+
+.offer-search-wrapper {
+  position: relative;
+}
+
+.offer-search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+}
+
+.filter-pills {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.filter-pills::-webkit-scrollbar { display: none; }
+
+.filter-pill {
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-pill.active {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+.filter-pill:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Coupon List */
+.coupon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.coupon-card {
+  background: var(--color-card-bg); /* Dark card bg */
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.coupon-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Header Row */
+.coupon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coupon-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.coupon-code {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-accent); /* Orange code name */
+  text-transform: uppercase;
+}
+
+.coupon-status {
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-active { background: rgba(16, 185, 129, 0.2); color: #34D399; }
+.status-scheduled { background: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+.status-expired { background: rgba(107, 114, 128, 0.2); color: #9CA3AF; }
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-switch.on { background: var(--color-accent); }
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch.on .toggle-thumb { transform: translateX(20px); }
+
+/* Description */
+.coupon-desc {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+}
+
+/* Usage Limit */
+.usage-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.usage-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.usage-nums { font-weight: 600; color: var(--color-text-primary); }
+
+.usage-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.usage-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.fill-orange { background: var(--color-accent); }
+.fill-grey { background: var(--color-text-muted); }
+
+/* Footer Metadata */
+.coupon-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* FAB */
+.fab-create {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(255, 122, 0, 0.4);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s;
+}
+
+.fab-create:hover {
+  transform: scale(1.1);
+  background: var(--color-accent-hover);
+}
+
+/* Modal Overlay & Content */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #0F172A;
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 500px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 { font-size: 1.25rem; color: white; }
+.modal-close { background: none; border: none; color: var(--color-text-muted); cursor: pointer; }
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}

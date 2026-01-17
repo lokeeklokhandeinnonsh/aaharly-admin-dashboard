@@ -1,0 +1,140 @@
+[
+    {
+        "day": 1,
+        "meals": [
+            {
+                "type": "Fat Loss",
+                "name": "Grilled Chicken & Veggies",
+                "category": "High Protein",
+                "image": "/meal_images/Grilled Chicken & Veggies.png"
+            },
+            {
+                "type": "General",
+                "name": "Dal Rice Meal",
+                "category": "Balanced",
+                "image": "/meal_images/Dal Rice Meal.png"
+            },
+            {
+                "type": "Weight Gain",
+                "name": "Chole Chawal",
+                "category": "High Carb",
+                "image": "/meal_images/Chole Chawal.png"
+            }
+        ]
+    },
+    {
+        "day": 2,
+        "meals": [
+            {
+                "type": "Fat Loss",
+                "name": "Paneer Stir-Fry Bowl",
+                "category": "High Protein",
+                "image": "/meal_images/Paneer Stir-Fry Bowl.png"
+            },
+            {
+                "type": "General",
+                "name": "Veg Mix Meal",
+                "category": "Balanced",
+                "image": "/meal_images/Veg Mix Meal.png"
+            },
+            {
+                "type": "Weight Gain",
+                "name": "Paneer Bhurji Meal",
+                "category": "High Carb + Protein",
+                "image": "/meal_images/Paneer Bhurji Meal.png"
+            }
+        ]
+    },
+    {
+        "day": 3,
+        "meals": [
+            {
+                "type": "Fat Loss",
+                "name": "Egg White Scramble",
+                "category": "High Protein",
+                "image": "/meal_images/Egg White Scramble.png"
+            },
+            {
+                "type": "General",
+                "name": "Rajma Chawal",
+                "category": "Balanced",
+                "image": "/meal_images/Rajma Chawal .png"
+            },
+            {
+                "type": "Weight Gain",
+                "name": "Chicken Curry Meal (with rice)",
+                "category": "High Carb + Protein",
+                "image": "/meal_images/Chicken Curry Meal.png"
+            }
+        ]
+    },
+    {
+        "day": 4,
+        "meals": [
+            {
+                "type": "Fat Loss",
+                "name": "Moong Dal Chilla Combo",
+                "category": "High Protein",
+                "image": "/meal_images/Moong Dal Chilla Combo.png"
+            },
+            {
+                "type": "General",
+                "name": "Chole Chawal",
+                "category": "Balanced",
+                "image": "/meal_images/Chole Chawal.png"
+            },
+            {
+                "type": "Weight Gain",
+                "name": "Khichdi & Curd Bowl",
+                "category": "High Carb",
+                "image": "/meal_images/Khichdi & Curd Bowl.png"
+            }
+        ]
+    },
+    {
+        "day": 5,
+        "meals": [
+            {
+                "type": "Fat Loss",
+                "name": "Tofu & Quinoa Bowl",
+                "category": "High Protein",
+                "image": "/meal_images/Tofu & Quinoa Bowl.png"
+            },
+            {
+                "type": "General",
+                "name": "Egg Curry Meal",
+                "category": "Balanced",
+                "image": "/meal_images/Egg Curry Meal.png"
+            },
+            {
+                "type": "Weight Gain",
+                "name": "Rajma Chawal",
+                "category": "High Carb",
+                "image": "/meal_images/Rajma Chawal .png"
+            }
+        ]
+    },
+    {
+        "day": 6,
+        "meals": [
+            {
+                "type": "Fat Loss",
+                "name": "Sprout & Paneer Bowl",
+                "category": "High Protein",
+                "image": "/meal_images/Sprout & Paneer Bowl.png"
+            },
+            {
+                "type": "General",
+                "name": "Paneer Bhurji Meal",
+                "category": "Balanced",
+                "image": "/meal_images/Paneer Bhurji Meal.png"
+            },
+            {
+                "type": "Weight Gain",
+                "name": "Chicken Curry Meal",
+                "category": "High Calorie",
+                "image": "/meal_images/Chicken Curry Meal.png"
+            }
+        ]
+    }
+]

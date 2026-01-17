@@ -1,0 +1,98 @@
+.reports-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.page-header {
+  margin-bottom: 0.5rem;
+}
+
+.page-header .title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.page-header .subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.admin-grid {
+  grid-template-columns: 2fr 1fr;
+}
+
+@media (max-width: 1024px) {
+  .admin-grid { grid-template-columns: 1fr; }
+}
+
+.report-card {
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.col-span-2 { grid-column: span 2; }
+@media (max-width: 768px) { .col-span-2 { grid-column: span 1; } }
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h3 {
+  font-size: 1.1rem;
+  color: white;
+  font-weight: 600;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.bg-success { background: #10B981; }
+.bg-warning { background: #F59E0B; }
+.bg-danger { background: #EF4444; }
+.text-success { color: #10B981; }
+.text-danger { color: #EF4444; }
+
+.kpi-summary { margin-bottom: 1rem; }
+.kpi-big { display: flex; align-items: baseline; gap: 0.75rem; }
+.kpi-big .val { font-size: 2.5rem; font-weight: 700; color: white;line-height: 1; }
+.kpi-big .trend { font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.25rem; }
+.trend.positive { color: var(--color-success); }
+
+.cost-breakdown { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 0.5rem; }
+.cost-item { display: flex; flex-direction: column; gap: 0.4rem; }
+.cost-item span { font-size: 0.85rem; color: var(--color-text-secondary); }
+.cost-item .val { color: white; font-weight: 600; align-self: flex-end; margin-top: -1.4rem; }
+
+.bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--color-accent); border-radius: 4px; }
+
+.health-stats { display: flex; flex-direction: column; gap: 1.5rem; }
+.h-stat span { display: block; font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 0.25rem; }
+.h-stat h3 { font-size: 1.75rem; font-weight: 700; color: white; }

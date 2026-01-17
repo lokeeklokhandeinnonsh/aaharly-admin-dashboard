@@ -1,0 +1,52 @@
+[
+    {
+        "title": "Weekly Fat Loss Plan",
+        "subTitle": "Low carb, high protein meals for weight loss",
+        "originalPrice": 1500,
+        "discountedPrice": 1200,
+        "duration": "1 Week",
+        "mealsPerDay": 2,
+        "currency": "INR",
+        "isActive": true
+    },
+    {
+        "title": "Monthly Muscle Gain",
+        "subTitle": "High protein, calorie surplus for gains",
+        "originalPrice": 6000,
+        "discountedPrice": 5000,
+        "duration": "1 Month",
+        "mealsPerDay": 3,
+        "currency": "INR",
+        "isActive": true
+    },
+    {
+        "title": "Vegan Starter",
+        "subTitle": "Plant-based nutrition for beginners",
+        "originalPrice": 1400,
+        "discountedPrice": 1100,
+        "duration": "1 Week",
+        "mealsPerDay": 2,
+        "currency": "INR",
+        "isActive": true
+    },
+    {
+        "title": "Keto Advanced",
+        "subTitle": "Strict ketogenic diet for metabolic health",
+        "originalPrice": 1800,
+        "discountedPrice": 1500,
+        "duration": "1 Week",
+        "mealsPerDay": 2,
+        "currency": "INR",
+        "isActive": true
+    },
+    {
+        "title": "Balanced Daily",
+        "subTitle": "Nutritious home-style meals",
+        "originalPrice": 1300,
+        "discountedPrice": 1000,
+        "duration": "1 Week",
+        "mealsPerDay": 2,
+        "currency": "INR",
+        "isActive": true
+    }
+]
