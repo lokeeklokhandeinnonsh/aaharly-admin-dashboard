@@ -3,9 +3,6 @@ import { X, Save, Upload, Plus, Info, Check } from 'lucide-react';
 import './MealEditor.css';
 import { type Meal } from '../api/adminClient';
 
-
-
-
 interface MealEditorProps {
     isOpen: boolean;
     onClose: () => void;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
-import type { Meal } from './MealEditor';
+import type { Meal } from "../api/adminClient";
 
 interface MealRowProps {
     meal: Meal;
