@@ -9,6 +9,7 @@ import {
 import './Users.css';
 import { adminClient, type User } from '../api/adminClient';
 import { UserRow } from '../components/UserRow';
+import { UserDetailsDrawer } from '../components/UserDetailsDrawer';
 import toast, { Toaster } from 'react-hot-toast';
 
 export const UsersPage: React.FC = () => {
@@ -17,6 +18,8 @@ export const UsersPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterGender, setFilterGender] = useState('All');
     const [filterGoal, setFilterGoal] = useState('All');
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     // Fetch Users on Mount
     useEffect(() => {
@@ -191,7 +194,10 @@ export const UsersPage: React.FC = () => {
                         <UserRow
                             key={user.userId}
                             user={user}
-                            onClick={(u) => console.log('View user', u.userId)} // Placeholder for Drawer
+                            onClick={(u) => {
+                                setSelectedUser(u);
+                                setIsDrawerOpen(true);
+                            }}
                         />
                     ))
                 ) : (
@@ -202,6 +208,13 @@ export const UsersPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* User Details Drawer */}
+            <UserDetailsDrawer
+                user={selectedUser}
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+            />
         </div>
     );
 };

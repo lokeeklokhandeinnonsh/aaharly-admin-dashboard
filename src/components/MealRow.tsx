@@ -14,7 +14,7 @@ export const MealRow: React.FC<MealRowProps> = ({ meal, onEdit, onDelete }) => {
             {/* Meal Details */}
             <div className="meal-details">
                 <h3 className="meal-name">{meal.name}</h3>
-                <p className="meal-desc">{meal.description || 'No description'}</p>
+                <p className="meal-desc">{meal.description || meal.subTitle || 'No description'}</p>
             </div>
 
             {/* Category Badge */}
@@ -37,14 +37,14 @@ export const MealRow: React.FC<MealRowProps> = ({ meal, onEdit, onDelete }) => {
             {/* Pricing */}
             <div className="meal-pricing">
                 <span className="price-primary">{meal.currency || '₹'}{meal.price || 0}</span>
-                {meal.originalPrice && meal.originalPrice > meal.price && (
+                {(meal.originalPrice ?? 0) > (meal.price ?? 0) && (
                     <span className="price-original">{meal.currency || '₹'}{meal.originalPrice}</span>
                 )}
             </div>
 
             {/* Status */}
             <div className="meal-status">
-                <MealStatusBadge status={meal.status} />
+                <MealStatusBadge status={meal.isActive ? 'active' : 'inactive'} />
             </div>
 
             {/* Actions */}

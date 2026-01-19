@@ -26,45 +26,45 @@ export const MealsPage: React.FC = () => {
     const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState('All');
+    const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
 
-    // Fetch Meals
+    // Fetch Data
     useEffect(() => {
         if (activeTab === 'library') {
             fetchMeals();
+        } else if (activeTab === 'menu') {
+            fetchCalendar();
         }
     }, [activeTab]);
 
     const fetchMeals = async () => {
         setIsLoading(true);
         try {
-            const rawData = await adminClient.getMeals();
-            const mappedMeals = (rawData as any[]).map(m => ({
-                ...m,
-                name: m.name || m.title || 'Untitled Meal',
-                description: m.description || m.subTitle || '',
-                price: m.price || m.discountedPrice || 0,
-                category: m.category || (m.categories && m.categories[0]?.title) || 'General',
-                status: m.status || (m.isActive ? 'active' : 'inactive'),
-                duration: m.duration || 28,
-                mealsPerDay: m.mealsPerDay || 3,
-                currency: m.currency || '₹',
-                nutrition: m.nutrition || { calories: 0, protein: 0, carbs: 0, fats: 0 },
-                ingredients: m.ingredients || [],
-                tags: m.tags || []
-            }));
-            setMeals(mappedMeals as Meal[]);
+            const [mealsData, categoriesData] = await Promise.all([
+                adminClient.getMeals(),
+                adminClient.getCategories()
+            ]);
 
-            try {
-                const categoriesList = await adminClient.getCategories();
-                if (categoriesList.length > 0) {
-                    setCategories(categoriesList);
-                }
-            } catch (catErr) {
-                console.warn('Failed to fetch categories:', catErr);
+            setMeals(mealsData);
+            if (categoriesData && categoriesData.length > 0) {
+                setCategories(categoriesData);
             }
         } catch (error) {
-            console.error('Failed to fetch meals:', error);
-            toast.error('Failed to load meals from server');
+            console.error('Failed to fetch meals or categories:', error);
+            toast.error('Failed to load data from server');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchCalendar = async () => {
+        setIsLoading(true);
+        try {
+            const calendarData = await adminClient.getCalendar();
+            setWeeklySchedule(calendarData);
+        } catch (error) {
+            console.error('Failed to fetch calendar:', error);
+            toast.error('Failed to load menu from server');
         } finally {
             setIsLoading(false);
         }
@@ -152,12 +152,12 @@ export const MealsPage: React.FC = () => {
                 name: mealData.name?.trim() || 'Untitled',
                 subTitle: mealData.description?.trim() || "A premium meal plan by Aaharly",
                 description: mealData.description?.trim() || "A premium meal plan by Aaharly",
-                originalPrice: origPrice,
-                discountedPrice: discPrice,
-                price: discPrice,
+                originalPrice: Math.max(0, origPrice),
+                discountedPrice: Math.max(0, discPrice),
+                price: Math.max(0, discPrice),
                 discountPercentage: calcDiscount,
-                duration: Number(mealData.duration || 28),
-                mealsPerDay: Number(mealData.mealsPerDay || 3),
+                duration: Math.max(1, Number(mealData.duration || 28)),
+                mealsPerDay: Math.max(1, Number(mealData.mealsPerDay || 3)),
                 isActive: mealData.status === 'active',
                 categoryIds: finalCategoryIds,
                 coverImageUrl: mealData.image?.trim() || mealData.coverImageUrl?.trim() || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
@@ -165,7 +165,8 @@ export const MealsPage: React.FC = () => {
 
             if (editingMeal && editingMeal.id) {
                 const updated = await adminClient.updateMeal(editingMeal.id, payload);
-                setMeals(prev => prev.map(m => m.id === editingMeal.id ? { ...updated, ...mealData } : m));
+                // Important: Use the returned 'updated' object which contains the server-side resolved isActive state
+                setMeals(prev => prev.map(m => m.id === editingMeal.id ? updated : m));
                 toast.success('Meal updated successfully');
             } else {
                 try {
@@ -189,9 +190,30 @@ export const MealsPage: React.FC = () => {
         }
     };
 
+
+    const getValidImageUrl = (url?: string) => {
+        if (!url) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c";
+        if (url.startsWith('http') || url.startsWith('data:')) return url;
+        if (url.startsWith('/')) return url; // Allow absolute paths
+        return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"; // Fallback for bare filenames
+    };
+
     // Render Weekly Menu View
     const renderWeeklyMenu = () => {
-        const schedule = mealScheduleData as Array<{ day: number; meals: Array<{ type: string; name: string; category: string; image: string }> }>;
+        // Fallback to mock data if backend calendar is empty
+        const schedule = (weeklySchedule && weeklySchedule.length > 0)
+            ? weeklySchedule
+            : mealScheduleData as any[];
+
+        if (isLoading && (!weeklySchedule || weeklySchedule.length === 0)) {
+            return (
+                <div className="weekly-menu">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="day-section skeleton-row" style={{ height: '200px' }}></div>
+                    ))}
+                </div>
+            );
+        }
 
         return (
             <div className="weekly-menu">
@@ -204,19 +226,21 @@ export const MealsPage: React.FC = () => {
                             <h3 className="day-title">Day {dayData.day}</h3>
                         </div>
                         <div className="meals-grid">
-                            {dayData.meals.map((meal, idx) => (
-                                <div key={idx} className="menu-meal-card">
-                                    {meal.image && (
-                                        <div className="menu-meal-image">
-                                            <img src={meal.image} alt={meal.name} />
-                                        </div>
-                                    )}
+                            {dayData.meals.map((item: any, idx: number) => (
+                                <div
+                                    key={idx}
+                                    className="menu-meal-card"
+                                    onClick={() => console.log('Edit day entry', item)}
+                                >
+                                    <div className="menu-meal-image">
+                                        <img src={getValidImageUrl(item.mealImage || item.image)} alt={item.mealName || item.name} />
+                                    </div>
                                     <div className="menu-meal-content">
-                                        <span className={`meal-type-badge meal-type-${meal.type.toLowerCase().replace(/\s+/g, '-')}`}>
-                                            {meal.type}
+                                        <span className={`meal-type-badge meal-type-${(item.categoryType || item.type || 'general').toLowerCase().replace(/\s+/g, '-')}`}>
+                                            {item.categoryTitle || item.type}
                                         </span>
-                                        <h4 className="menu-meal-name">{meal.name}</h4>
-                                        <p className="menu-meal-category">{meal.category}</p>
+                                        <h4 className="menu-meal-name">{item.mealName || item.name}</h4>
+                                        <p className="menu-meal-category">{item.categoryTitle || item.category}</p>
                                     </div>
                                 </div>
                             ))}

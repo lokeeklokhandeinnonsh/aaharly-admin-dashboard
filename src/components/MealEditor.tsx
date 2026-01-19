@@ -103,30 +103,6 @@ export const MealEditor: React.FC<MealEditorProps> = ({ isOpen, onClose, onSave,
         }));
     };
 
-    // const handleAddCategory = async () => {
-    //     if (!newCategoryName.trim()) return;
-    //     setIsCreatingCategory(true);
-    //     try {
-    //         const name = newCategoryName.trim();
-    //         const created = await adminClient.createCategory({
-    //             title: name,
-    //             subTitle: `Specialized category for ${name} meal plans`
-    //         });
-    //         toast.success('Category created!');
-    //         setNewCategoryName('');
-    //         setIsAddingCategory(false);
-    //         if (onRefreshCategories) {
-    //             onRefreshCategories();
-    //         }
-    //         // Auto-select the new category
-    //         handleChange('category', created.title);
-    //     } catch (error) {
-    //         console.error(error);
-    //         toast.error('Failed to create category');
-    //     } finally {
-    //         setIsCreatingCategory(false);
-    //     }
-    // };
 
     return (
         <div className="meal-editor-overlay">

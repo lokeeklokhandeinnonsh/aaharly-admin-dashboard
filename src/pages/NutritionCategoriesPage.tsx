@@ -4,7 +4,8 @@ import {
     Search,
     Layers,
     Tag,
-    TrendingUp
+    TrendingUp,
+    Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminClient } from '../api/adminClient';
@@ -31,6 +32,19 @@ export const NutritionCategoriesPage: React.FC = () => {
         }
     };
 
+    const handleDeleteCategory = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this category? This might affect associated meal plans.')) return;
+
+        try {
+            await adminClient.deleteCategory(id);
+            toast.success('Category deleted successfully');
+            fetchCategories();
+        } catch (error) {
+            console.error('Error deleting category:', error);
+            toast.error('Failed to delete category');
+        }
+    };
+
     useEffect(() => {
         fetchCategories();
     }, []);
@@ -40,7 +54,7 @@ export const NutritionCategoriesPage: React.FC = () => {
         cat.name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const totalMeals = 0; // Backend doesn't provide meal count yet
+    const totalMeals = categories.reduce((acc, cat) => acc + (cat.taggedMealsCount || 0), 0);
 
     return (
         <div className="categories-page">
@@ -102,7 +116,17 @@ export const NutritionCategoriesPage: React.FC = () => {
                                 <p className="cat-desc">{cat.subTitle || 'No description'}</p>
                             </div>
                             <div className="cat-meta">
-                                <span className="meal-count">0 Meals</span>
+                                <span className="meal-count">{cat.taggedMealsCount || 0} Meals</span>
+                                <button
+                                    className="cat-delete-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteCategory(cat.id);
+                                    }}
+                                    title="Delete Category"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
                         </div>
                     ))
