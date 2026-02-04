@@ -6,7 +6,6 @@ import {
     List,
     Utensils
 } from 'lucide-react';
-import './MealsPage.css';
 import { MealEditor } from '../components/MealEditor';
 import { MealRow } from '../components/MealRow';
 import toast, { Toaster } from 'react-hot-toast';
@@ -27,6 +26,16 @@ export const MealsPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState('All');
     const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
+    const [width, setWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => setWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const isLaptop = width <= 1024;
+    const isMobile = width <= 768;
 
     // Fetch Data
     useEffect(() => {
@@ -101,14 +110,6 @@ export const MealsPage: React.FC = () => {
         return ['All', ...Array.from(cats)];
     }, [meals]);
 
-    // Handlers
-    // const refreshCategories = async () => {
-    //     try {
-    //         const categoriesList = await adminClient.getCategories();
-    //         setCategories(categoriesList);
-    //     } catch (e) { console.warn('Failed to refresh categories'); }
-    // };
-
     const handleAddNew = () => {
         if (!isSuperAdmin) return;
         setEditingMeal(null);
@@ -165,7 +166,6 @@ export const MealsPage: React.FC = () => {
 
             if (editingMeal && editingMeal.id) {
                 const updated = await adminClient.updateMeal(editingMeal.id, payload);
-                // Important: Use the returned 'updated' object which contains the server-side resolved isActive state
                 setMeals(prev => prev.map(m => m.id === editingMeal.id ? updated : m));
                 toast.success('Meal updated successfully');
             } else {
@@ -194,8 +194,236 @@ export const MealsPage: React.FC = () => {
     const getValidImageUrl = (url?: string) => {
         if (!url) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c";
         if (url.startsWith('http') || url.startsWith('data:')) return url;
-        if (url.startsWith('/')) return url; // Allow absolute paths
-        return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"; // Fallback for bare filenames
+        if (url.startsWith('/')) return url;
+        return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c";
+    };
+
+    // Styles
+    let gridTemplate = 'minmax(280px, 3fr) 140px 120px 120px 120px 100px';
+    if (isLaptop) gridTemplate = '2fr 140px 1fr 120px 100px';
+    if (isMobile) gridTemplate = '1fr';
+
+    const styles = {
+        page: {
+            display: 'flex',
+            flexDirection: 'column' as const,
+            gap: '24px',
+            padding: isMobile ? '1rem' : '2rem',
+            maxWidth: '1400px',
+            margin: '0 auto',
+            animation: 'fadeIn 0.5s ease-out',
+        },
+        header: {
+            marginBottom: '2rem',
+        },
+        title: {
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: 'var(--text-primary, #fff)',
+            margin: '0 0 0.5rem 0',
+        },
+        subtitle: {
+            fontSize: '0.875rem',
+            color: 'var(--text-muted, rgba(255, 255, 255, 0.6))',
+            margin: 0,
+        },
+        // Tabs
+        tabNav: {
+            display: 'flex',
+            gap: '0.5rem',
+            marginBottom: '2rem',
+            padding: '0.25rem',
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '12px',
+            width: 'fit-content',
+        },
+        tabBtn: (active: boolean) => ({
+            padding: '0.75rem 1.5rem',
+            border: 'none',
+            background: active ? 'linear-gradient(135deg, #FF7A18 0%, #FF5722 100%)' : 'transparent',
+            color: active ? 'white' : 'var(--text-muted, rgba(255,255,255,0.6))',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            borderRadius: '10px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            boxShadow: active ? '0 4px 12px rgba(255, 122, 24, 0.3)' : 'none',
+        }),
+        // Controls
+        controlsRow: {
+            display: 'flex',
+            gap: '1rem',
+            marginBottom: '2rem',
+            flexWrap: 'wrap' as const,
+            alignItems: 'center',
+            flexDirection: isMobile ? 'column' as const : 'row' as const,
+        },
+        searchWrapper: {
+            position: 'relative' as const,
+            flex: 1,
+            minWidth: isMobile ? '100%' : '250px',
+        },
+        searchInput: {
+            width: '100%',
+            padding: '0.875rem 1rem 0.875rem 3rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            color: 'white',
+            fontSize: '0.875rem',
+            outline: 'none',
+        },
+        searchIcon: {
+            position: 'absolute' as const,
+            left: '1rem',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--text-muted, rgba(255,255,255,0.6))',
+            pointerEvents: 'none' as const,
+        },
+        filterSelect: {
+            padding: '0.875rem 1rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            color: 'white',
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            minWidth: '150px',
+            outline: 'none',
+        },
+        btnAdd: {
+            padding: '0.875rem 1.5rem',
+            borderRadius: '12px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #FF7A18 0%, #FF5722 100%)',
+            color: 'white',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            boxShadow: '0 4px 12px rgba(255, 122, 24, 0.3)',
+        },
+        // List Header
+        listHeader: {
+            display: isMobile ? 'none' : 'grid',
+            gridTemplateColumns: gridTemplate,
+            padding: '0 1.5rem',
+            marginBottom: '0.5rem',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary, #cbd5e1)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.5px',
+            gap: '1.5rem',
+            alignItems: 'center',
+        },
+        list: {
+            display: 'flex',
+            flexDirection: 'column' as const,
+            gap: '0.75rem',
+            marginBottom: '5rem',
+        },
+        // Weekly Menu
+        weeklyMenu: {
+            display: 'flex',
+            flexDirection: 'column' as const,
+            gap: '1.5rem',
+        },
+        daySection: {
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+        },
+        dayHeader: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            marginBottom: '1rem',
+        },
+        dayIcon: {
+            width: '40px',
+            height: '40px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, rgba(255, 122, 24, 0.1) 0%, rgba(255, 87, 34, 0.1) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FF7A18',
+        },
+        mealsGrid: {
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '1rem',
+        },
+        menuMealCard: {
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            overflow: 'hidden',
+            cursor: 'pointer',
+        },
+        menuMealImage: {
+            width: '100%',
+            height: '180px',
+            background: 'rgba(255, 255, 255, 0.02)',
+        },
+        menuMealContent: {
+            padding: '1rem',
+        },
+        mealTypeBadge: (type: string) => {
+            // Basic colors
+            let bg = 'rgba(34, 197, 94, 0.15)', color = '#22c55e'; // Green (General/Lunch)
+            const t = type.toLowerCase();
+            if (t.includes('fat') || t.includes('breakfast')) { bg = 'rgba(255, 122, 24, 0.15)'; color = '#FF7A18'; }
+            if (t.includes('gain') || t.includes('dinner')) { bg = 'rgba(59, 130, 246, 0.15)'; color = '#3b82f6'; }
+
+            return {
+                display: 'inline-block',
+                padding: '0.25rem 0.625rem',
+                borderRadius: '12px',
+                fontSize: '0.625rem',
+                fontWeight: 600,
+                textTransform: 'uppercase' as const,
+                marginBottom: '0.5rem',
+                background: bg,
+                color: color,
+                border: `1px solid ${bg.replace('0.15', '0.3')}`
+            };
+        },
+        menuMealName: {
+            fontSize: '0.9375rem',
+            fontWeight: 600,
+            color: 'var(--text-primary, #fff)',
+            margin: '0 0 0.375rem 0',
+            lineHeight: 1.4,
+        },
+        menuMealCategory: {
+            fontSize: '0.75rem',
+            color: 'var(--text-muted, rgba(255,255,255,0.6))',
+            margin: 0,
+        },
+        emptyState: {
+            textAlign: 'center' as const,
+            padding: '4rem 2rem',
+            color: 'var(--text-muted, rgba(255,255,255,0.6))',
+        },
+        skeletonRow: {
+            display: 'grid',
+            gridTemplateColumns: gridTemplate,
+            gap: '1rem',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            alignItems: 'center',
+            animation: 'pulse 1.5s infinite',
+        }
     };
 
     // Render Weekly Menu View
@@ -207,40 +435,45 @@ export const MealsPage: React.FC = () => {
 
         if (isLoading && (!weeklySchedule || weeklySchedule.length === 0)) {
             return (
-                <div className="weekly-menu">
+                <div style={styles.weeklyMenu}>
+                    <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }`}</style>
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="day-section skeleton-row" style={{ height: '200px' }}></div>
+                        <div key={i} style={{ ...styles.daySection, height: '200px', animation: 'pulse 1.5s infinite' }}></div>
                     ))}
                 </div>
             );
         }
 
         return (
-            <div className="weekly-menu">
+            <div style={styles.weeklyMenu}>
                 {schedule.map((dayData) => (
-                    <div key={dayData.day} className="day-section glass-panel">
-                        <div className="day-header">
-                            <div className="day-icon">
+                    <div key={dayData.day} style={styles.daySection} className="glass-panel">
+                        <div style={styles.dayHeader}>
+                            <div style={styles.dayIcon}>
                                 <Calendar size={20} />
                             </div>
-                            <h3 className="day-title">Day {dayData.day}</h3>
+                            <h3 style={{ ...styles.title, fontSize: '1.125rem' }}>{dayData.day}</h3>
                         </div>
-                        <div className="meals-grid">
+                        <div style={styles.mealsGrid}>
                             {dayData.meals.map((item: any, idx: number) => (
                                 <div
                                     key={idx}
-                                    className="menu-meal-card"
+                                    style={styles.menuMealCard}
                                     onClick={() => console.log('Edit day entry', item)}
                                 >
-                                    <div className="menu-meal-image">
-                                        <img src={getValidImageUrl(item.mealImage || item.image)} alt={item.mealName || item.name} />
+                                    <div style={styles.menuMealImage}>
+                                        <img
+                                            src={getValidImageUrl(item.mealImage || item.image)}
+                                            alt={item.mealName || item.name}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
                                     </div>
-                                    <div className="menu-meal-content">
-                                        <span className={`meal-type-badge meal-type-${(item.categoryType || item.type || 'general').toLowerCase().replace(/\s+/g, '-')}`}>
+                                    <div style={styles.menuMealContent}>
+                                        <span style={styles.mealTypeBadge(item.categoryType || item.type || 'general')}>
                                             {item.categoryTitle || item.type}
                                         </span>
-                                        <h4 className="menu-meal-name">{item.mealName || item.name}</h4>
-                                        <p className="menu-meal-category">{item.categoryTitle || item.category}</p>
+                                        <h4 style={styles.menuMealName}>{item.mealName || item.name}</h4>
+                                        <p style={styles.menuMealCategory}>{item.categoryTitle || item.category}</p>
                                     </div>
                                 </div>
                             ))}
@@ -252,26 +485,33 @@ export const MealsPage: React.FC = () => {
     };
 
     return (
-        <div className="meals-page animate-fade-in">
+        <div style={styles.page}>
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                option { background: #0f172a; color: white; }
+            `}</style>
             <Toaster position="top-right" />
 
             {/* Page Header */}
-            <div className="page-header">
-                <h2 className="page-title">Meal Management</h2>
-                <p className="page-subtitle">Manage global food catalog and weekly schedules.</p>
+            <div style={styles.header}>
+                <h2 style={styles.title}>Meal Management</h2>
+                <p style={styles.subtitle}>Manage global food catalog and weekly schedules.</p>
             </div>
 
             {/* Tab Navigation */}
-            <div className="tab-navigation">
+            <div style={styles.tabNav}>
                 <button
-                    className={`tab-btn ${activeTab === 'library' ? 'active' : ''}`}
+                    style={styles.tabBtn(activeTab === 'library')}
                     onClick={() => setActiveTab('library')}
                 >
                     <List size={18} />
                     Meal Library
                 </button>
                 <button
-                    className={`tab-btn ${activeTab === 'menu' ? 'active' : ''}`}
+                    style={styles.tabBtn(activeTab === 'menu')}
                     onClick={() => setActiveTab('menu')}
                 >
                     <Calendar size={18} />
@@ -283,19 +523,20 @@ export const MealsPage: React.FC = () => {
             {activeTab === 'library' && (
                 <>
                     {/* Controls Row */}
-                    <div className="controls-row">
-                        <div className="search-wrapper">
-                            <Search className="search-icon" size={20} />
+                    <div style={styles.controlsRow}>
+                        <div style={styles.searchWrapper}>
+                            <Search style={styles.searchIcon} size={20} />
                             <input
                                 type="text"
                                 placeholder="Search meals..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                style={styles.searchInput}
                             />
                         </div>
 
                         <select
-                            className="filter-select"
+                            style={styles.filterSelect}
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                         >
@@ -305,7 +546,7 @@ export const MealsPage: React.FC = () => {
                         </select>
 
                         {isSuperAdmin && (
-                            <button className="btn-add-meal" onClick={handleAddNew}>
+                            <button style={styles.btnAdd} onClick={handleAddNew}>
                                 <Plus size={20} />
                                 Add New Meal
                             </button>
@@ -313,34 +554,26 @@ export const MealsPage: React.FC = () => {
                     </div>
 
                     {/* List Header */}
-                    <div className="meals-list-header">
-                        <span className="header-label">Meal Details</span>
-                        <span className="header-label">Category</span>
-                        <span className="header-label">Configuration</span>
-                        <span className="header-label">Pricing</span>
-                        <span className="header-label">Status</span>
-                        <span className="header-label">Actions</span>
-                    </div>
+                    {!isMobile && (
+                        <div style={styles.listHeader}>
+                            <span>Meal Details</span>
+                            <span>Category</span>
+                            {!isLaptop && <span>Configuration</span>}
+                            <span style={{ textAlign: isLaptop ? 'center' : 'right' as const }}>Pricing</span>
+                            <span style={{ textAlign: 'center' }}>Status</span>
+                            <span style={{ textAlign: 'right' }}>Actions</span>
+                        </div>
+                    )}
 
                     {/* Meals List */}
-                    <div className="meals-list">
+                    <div style={styles.list}>
                         {isLoading ? (
-                            Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="skeleton-row">
-                                    <div className="skeleton-content">
-                                        <div className="skeleton-line"></div>
-                                        <div className="skeleton-line short"></div>
-                                    </div>
-                                    <div className="skeleton-pill"></div>
-                                    <div className="skeleton-content">
-                                        <div className="skeleton-line short"></div>
-                                        <div className="skeleton-line short"></div>
-                                    </div>
-                                    <div className="skeleton-line short"></div>
-                                    <div className="skeleton-pill"></div>
-                                    <div className="skeleton-line short"></div>
-                                </div>
-                            ))
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }`}</style>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <div key={i} style={styles.skeletonRow}></div>
+                                ))}
+                            </div>
                         ) : filteredMeals.length > 0 ? (
                             filteredMeals.map(meal => (
                                 <MealRow
@@ -348,19 +581,21 @@ export const MealsPage: React.FC = () => {
                                     meal={meal}
                                     onEdit={handleEdit}
                                     onDelete={handleDelete}
+                                    isLaptop={isLaptop}
+                                    isMobile={isMobile}
                                 />
                             ))
                         ) : (
-                            <div className="empty-state">
-                                <Utensils size={48} className="empty-state-icon" />
-                                <h3>No meals found</h3>
-                                <p>
+                            <div style={styles.emptyState}>
+                                <Utensils size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.3 }} />
+                                <h3 style={{ ...styles.title, marginBottom: '0.5rem' }}>No meals found</h3>
+                                <p style={{ margin: '0 0 1.5rem 0' }}>
                                     {searchTerm || filterCategory !== 'All'
                                         ? 'Try adjusting your filters'
                                         : 'Create your first meal to get started'}
                                 </p>
                                 {isSuperAdmin && !searchTerm && filterCategory === 'All' && (
-                                    <button className="btn-add-meal" onClick={handleAddNew}>
+                                    <button style={styles.btnAdd} onClick={handleAddNew}>
                                         <Plus size={20} />
                                         Add First Meal
                                     </button>

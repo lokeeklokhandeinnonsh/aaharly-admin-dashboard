@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Calendar,
     RefreshCw,
@@ -10,7 +10,6 @@ import {
     Package,
     AlertOctagon
 } from 'lucide-react';
-import './ProductionDashboard.css';
 
 // --- MOCK DATA ---
 const KPI_DATA = {
@@ -47,125 +46,445 @@ const ALERTS = [
 
 export const ProductionDashboard: React.FC = () => {
     const [dateRange] = useState('Today, Jan 11');
+    const [width, setWidth] = useState(window.innerWidth);
+    const [hoveredKpi, setHoveredKpi] = useState<number | null>(null);
+
+    useEffect(() => {
+        const handleResize = () => setWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const isLaptop = width <= 1024;
+    const isMobile = width <= 768;
+
+    // Helper for KPI styling
+    const getKpiColor = (color: string) => {
+        switch (color) {
+            case 'blue': return '#3B82F6';
+            case 'green': return '#10B981';
+            case 'orange': return '#F97316';
+            case 'purple': return '#8B5CF6';
+            case 'red': return '#EF4444';
+            default: return '#3B82F6';
+        }
+    };
+
+    const styles = {
+        page: {
+            display: 'flex',
+            flexDirection: 'column' as const,
+            gap: '2rem',
+            padding: isMobile ? '1rem' : '1.5rem',
+            animation: 'fadeIn 0.5s ease-out',
+        },
+        header: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            marginBottom: '1rem',
+            flexWrap: 'wrap' as const,
+            gap: '1rem',
+        },
+        title: {
+            fontSize: '1.75rem',
+            fontWeight: 700,
+            color: 'white',
+            marginBottom: '0.25rem',
+            letterSpacing: '-0.02em',
+        },
+        subtitle: {
+            fontSize: '0.95rem',
+            color: 'var(--color-text-muted, rgba(255,255,255,0.6))',
+            margin: 0,
+        },
+        headerControls: {
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'center',
+        },
+        dateSelector: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '0.6rem 1.2rem',
+            borderRadius: '9999px',
+            color: 'white',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+        },
+        btnIconGlass: {
+            width: '42px',
+            height: '42px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '50%',
+            color: 'var(--color-text-secondary, #cbd5e1)',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+        },
+        // KPI Row
+        kpiRow: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1.25rem',
+        },
+        kpiCard: (color: string, index: number) => ({
+            background: 'rgba(30, 41, 59, 0.6)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            padding: '1.25rem',
+            borderRadius: '16px',
+            display: 'flex',
+            flexDirection: 'column' as const,
+            position: 'relative' as const,
+            overflow: 'hidden',
+            transition: 'transform 0.2s',
+            transform: hoveredKpi === index ? 'translateY(-3px)' : 'none',
+        }),
+        kpiLabel: {
+            fontSize: '0.8rem',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.05em',
+            color: 'var(--color-text-muted, rgba(255,255,255,0.6))',
+            marginBottom: '0.5rem',
+            fontWeight: 600,
+        },
+        kpiValue: {
+            fontSize: '2.2rem',
+            fontWeight: 700,
+            color: 'white',
+            lineHeight: 1,
+        },
+        kpiHint: (type: 'good' | 'bad' | 'warn') => ({
+            fontSize: '0.75rem',
+            color: type === 'good' ? '#10B981' : type === 'bad' ? '#EF4444' : '#F59E0B',
+            marginTop: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+        }),
+        statusBarTiny: (color: string) => ({
+            position: 'absolute' as const,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            background: getKpiColor(color),
+        }),
+        // Section Panel
+        sectionPanel: {
+            padding: '1.5rem',
+            borderRadius: '16px',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            display: 'flex',
+            flexDirection: 'column' as const,
+        },
+        panelHeader: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1.25rem',
+        },
+        panelTitle: {
+            fontSize: '1.1rem',
+            color: 'white',
+            fontWeight: 600,
+            margin: 0,
+        },
+        // Progress
+        progressTrack: {
+            height: '12px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '6px',
+            position: 'relative' as const,
+            display: 'flex',
+            margin: '2rem 0 1rem',
+        },
+        progressSegment: (color: string, width: string, isFirst: boolean, isLast: boolean) => ({
+            height: '100%',
+            width,
+            background: color === 'done' ? '#10B981' : color === 'prep' ? '#3B82F6' : 'transparent',
+            borderTopLeftRadius: isFirst ? '6px' : 0,
+            borderBottomLeftRadius: isFirst ? '6px' : 0,
+            borderTopRightRadius: isLast ? '6px' : 0,
+            borderBottomRightRadius: isLast ? '6px' : 0,
+            position: 'relative' as const,
+        }),
+        milestoneMarker: (left: string) => ({
+            position: 'absolute' as const,
+            top: '-30px',
+            left,
+            transform: 'translateX(-50%)',
+            background: '#0f172a',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '0.25rem 0.75rem',
+            borderRadius: '12px',
+            fontSize: '0.75rem',
+            color: 'white',
+            whiteSpace: 'nowrap' as const,
+        }),
+        markerTriangle: {
+            position: 'absolute' as const,
+            bottom: '-6px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            borderWidth: '6px 6px 0',
+            borderStyle: 'solid',
+            borderColor: 'rgba(255, 255, 255, 0.1) transparent transparent transparent',
+        },
+        legend: {
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '2rem',
+            marginTop: '0.5rem',
+            flexWrap: 'wrap' as const,
+        },
+        legendItem: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.8rem',
+            color: '#cbd5e1',
+        },
+        // Main Grid
+        mainGrid: {
+            display: 'grid',
+            gridTemplateColumns: isLaptop ? '1fr' : '2fr 1fr',
+            gap: '1.5rem',
+        },
+        col: {
+            display: 'flex',
+            flexDirection: 'column' as const,
+            gap: '1.5rem',
+        },
+        // Table
+        table: {
+            width: '100%',
+            borderCollapse: 'collapse' as const,
+        },
+        th: {
+            textAlign: 'left' as const,
+            padding: '1rem',
+            fontSize: '0.75rem',
+            textTransform: 'uppercase' as const,
+            color: 'var(--color-text-muted, rgba(255,255,255,0.6))',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        },
+        td: {
+            padding: '1rem',
+            fontSize: '0.9rem',
+            color: 'white',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        },
+        chip: (status: string) => {
+            let bg = 'rgba(249, 115, 22, 0.1)', color = '#F97316';
+            if (status === 'Completed' || status === 'Active') { bg = 'rgba(16, 185, 129, 0.1)'; color = '#34D399'; }
+            if (status === 'In Progress' || status === 'Pending') { bg = 'rgba(59, 130, 246, 0.1)'; color = '#60A5FA'; }
+            if (status === 'Delayed') { bg = 'rgba(239, 68, 68, 0.1)'; color = '#F87171'; }
+            // Correction for blue active
+            if (status === 'Active') { bg = 'rgba(59, 130, 246, 0.1)'; color = '#60A5FA'; }
+
+            return {
+                padding: '0.25rem 0.75rem',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                textTransform: 'uppercase' as const,
+                background: bg,
+                color: color,
+                whiteSpace: 'nowrap' as const,
+            };
+        },
+        btnSmAction: {
+            background: 'transparent',
+            color: 'var(--color-accent, #FF7A18)',
+            border: '1px solid var(--color-accent, #FF7A18)',
+            padding: '0.25rem 0.75rem',
+            borderRadius: '4px',
+            fontSize: '0.75rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+        },
+        // Alerts
+        alertList: {
+            display: 'flex',
+            flexDirection: 'column' as const,
+            gap: '0.75rem',
+        },
+        alertItem: (type: string) => ({
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'flex-start',
+            padding: '1rem',
+            borderRadius: '12px',
+            fontSize: '0.9rem',
+            background: type === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+            border: `1px solid ${type === 'critical' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
+        }),
+        alertAction: (type: string) => ({
+            display: 'inline-block',
+            marginTop: '0.5rem',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            color: type === 'critical' ? '#F87171' : '#FBBF24',
+        }),
+        // Dispatch
+        dispatchGrid: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '1rem',
+            marginBottom: '1rem',
+        },
+        dispatchItem: {
+            background: 'rgba(0,0,0,0.2)',
+            padding: '0.75rem',
+            borderRadius: '8px',
+            textAlign: 'center' as const,
+        },
+        // Inventory
+        invItem: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '0.75rem 0',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        },
+        barBg: {
+            width: '60px',
+            height: '4px',
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '2px',
+            margin: '0 0.5rem',
+        }
+    };
 
     return (
-        <div className="production-dashboard">
+        <div style={styles.page}>
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
             {/* Header */}
-            <div className="dashboard-header">
+            <div style={styles.header}>
                 <div>
-                    <h2 className="title">Daily Operations</h2>
-                    <p className="subtitle">Today's Kitchen & Dispatch Overview</p>
+                    <h2 style={styles.title}>Daily Operations</h2>
+                    <p style={styles.subtitle}>Today's Kitchen & Dispatch Overview</p>
                 </div>
-                <div className="header-controls">
-                    <div className="date-selector">
+                <div style={styles.headerControls}>
+                    <div style={styles.dateSelector}>
                         <Calendar size={16} />
                         <span>{dateRange}</span>
                         <ChevronRight size={14} />
                     </div>
-                    <button className="btn-icon-glass" title="Refresh Data">
+                    <button style={styles.btnIconGlass} title="Refresh Data">
                         <RefreshCw size={18} />
                     </button>
                 </div>
             </div>
 
             {/* 1. KPI Summary Row */}
-            <div className="kpi-row">
-                <div className="kpi-card blue">
-                    <span className="kpi-label">Meals Planned</span>
-                    <span className="kpi-value">{KPI_DATA.planned}</span>
-                    <div className="status-bar-tiny"></div>
-                </div>
-                <div className="kpi-card green">
-                    <span className="kpi-label">Meals Prepared</span>
-                    <span className="kpi-value">{KPI_DATA.prepared}</span>
-                    <span className="kpi-hint good"><TrendingUp size={12} /> 69% Complete</span>
-                    <div className="status-bar-tiny"></div>
-                </div>
-                <div className="kpi-card orange">
-                    <span className="kpi-label">Remaining</span>
-                    <span className="kpi-value">{KPI_DATA.remaining}</span>
-                    <span className="kpi-hint warn">Target: 4:00 PM</span>
-                    <div className="status-bar-tiny"></div>
-                </div>
-                <div className="kpi-card purple">
-                    <span className="kpi-label">Ready for Dispatch</span>
-                    <span className="kpi-value">{KPI_DATA.dispatchReady}</span>
-                    <div className="status-bar-tiny"></div>
-                </div>
-                <div className="kpi-card red">
-                    <span className="kpi-label">Delayed Batches</span>
-                    <span className="kpi-value">{KPI_DATA.delayed}</span>
-                    <span className="kpi-hint bad"><AlertTriangle size={12} /> Action Needed</span>
-                    <div className="status-bar-tiny"></div>
-                </div>
+            <div style={styles.kpiRow}>
+                {[
+                    { l: 'Meals Planned', v: KPI_DATA.planned, c: 'blue', h: null },
+                    { l: 'Meals Prepared', v: KPI_DATA.prepared, c: 'green', h: { t: 'good', i: <TrendingUp size={12} />, tx: '69% Complete' } },
+                    { l: 'Remaining', v: KPI_DATA.remaining, c: 'orange', h: { t: 'warn', i: null, tx: 'Target: 4:00 PM' } },
+                    { l: 'Ready for Dispatch', v: KPI_DATA.dispatchReady, c: 'purple', h: null },
+                    { l: 'Delayed Batches', v: KPI_DATA.delayed, c: 'red', h: { t: 'bad', i: <AlertTriangle size={12} />, tx: 'Action Needed' } }
+                ].map((k, idx) => (
+                    <div
+                        key={idx}
+                        style={styles.kpiCard(k.c, idx)}
+                        onMouseEnter={() => setHoveredKpi(idx)}
+                        onMouseLeave={() => setHoveredKpi(null)}
+                    >
+                        <span style={styles.kpiLabel}>{k.l}</span>
+                        <span style={styles.kpiValue}>{k.v}</span>
+                        {k.h && (
+                            <span style={styles.kpiHint(k.h.t as any)}>
+                                {k.h.i} {k.h.tx}
+                            </span>
+                        )}
+                        <div style={styles.statusBarTiny(k.c)}></div>
+                    </div>
+                ))}
             </div>
 
             {/* 2. Progress Overview */}
-            <div className="section-panel">
-                <div className="progress-header">
-                    <h3>Today's Progress</h3>
-                    <span className="subtitle" style={{ color: 'var(--color-text-muted)' }}>Cutoff: 5:00 PM</span>
+            <div style={styles.sectionPanel}>
+                <div style={styles.panelHeader}>
+                    <h3 style={styles.panelTitle}>Today's Progress</h3>
+                    <span style={styles.subtitle}>Cutoff: 5:00 PM</span>
                 </div>
-                <div className="progress-track">
-                    {/* 69% Prep, of which 62% is dispatched roughly */}
-                    <div className="progress-segment done" style={{ width: '40%' }}>
-                        {/* Dispatched */}
-                    </div>
-                    <div className="progress-segment prep" style={{ width: '29%' }}>
-                        {/* Prepared but not dispatched */}
-                    </div>
-                    <div className="progress-segment" style={{ width: '31%', background: 'transparent' }}>
-                        {/* Remaining */}
-                    </div>
+                <div style={styles.progressTrack}>
+                    <div style={styles.progressSegment('done', '40%', true, false)}></div>
+                    <div style={styles.progressSegment('prep', '29%', false, false)}></div>
+                    <div style={styles.progressSegment('bg', '31%', false, true)}></div>
 
-                    {/* Markers */}
-                    <div className="milestone-marker" style={{ left: '20%' }}>10 AM</div>
-                    <div className="milestone-marker" style={{ left: '50%' }}>1 PM</div>
-                    <div className="milestone-marker" style={{ left: '80%' }}>4 PM</div>
+                    {[
+                        { l: '20%', t: '10 AM' },
+                        { l: '50%', t: '1 PM' },
+                        { l: '80%', t: '4 PM' }
+                    ].map((m, i) => (
+                        <div key={i} style={styles.milestoneMarker(m.l)}>
+                            {m.t}
+                            <div style={styles.markerTriangle}></div>
+                        </div>
+                    ))}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                <div style={styles.legend}>
+                    <div style={styles.legendItem}>
                         <div style={{ width: 10, height: 10, background: '#10B981', borderRadius: 2 }}></div> Dispatched
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                    <div style={styles.legendItem}>
                         <div style={{ width: 10, height: 10, background: '#3B82F6', borderRadius: 2 }}></div> Prepared
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                    <div style={styles.legendItem}>
                         <div style={{ width: 10, height: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}></div> Remaining
                     </div>
                 </div>
             </div>
 
             {/* Main Content Split */}
-            <div className="main-grid">
-                {/* Left Column: Meal Breakdown & Prep Status */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
+            <div style={styles.mainGrid}>
+                {/* Left Column */}
+                <div style={styles.col}>
                     {/* 3. Meal Production Breakdown */}
-                    <div className="section-panel">
-                        <div className="panel-header">
-                            <h3>Meal Production Breakdown</h3>
+                    <div style={styles.sectionPanel}>
+                        <div style={styles.panelHeader}>
+                            <h3 style={styles.panelTitle}>Meal Production Breakdown</h3>
                         </div>
-                        <div className="table-wrapper">
-                            <table className="data-table">
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={styles.table}>
                                 <thead>
                                     <tr>
-                                        <th>Meal Name</th>
-                                        <th style={{ textAlign: 'center' }}>Plan</th>
-                                        <th style={{ textAlign: 'center' }}>Done</th>
-                                        <th style={{ textAlign: 'center' }}>Rem</th>
-                                        <th style={{ textAlign: 'right' }}>Status</th>
+                                        <th style={styles.th}>Meal Name</th>
+                                        <th style={{ ...styles.th, textAlign: 'center' }}>Plan</th>
+                                        <th style={{ ...styles.th, textAlign: 'center' }}>Done</th>
+                                        <th style={{ ...styles.th, textAlign: 'center' }}>Rem</th>
+                                        <th style={{ ...styles.th, textAlign: 'right' }}>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {MEAL_BREAKDOWN.map(m => (
                                         <tr key={m.id}>
-                                            <td>{m.name}</td>
-                                            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{m.plan}</td>
-                                            <td style={{ textAlign: 'center', color: '#10B981' }}>{m.done}</td>
-                                            <td style={{ textAlign: 'center', color: m.rem > 0 ? '#F97316' : '#64748b' }}>{m.rem}</td>
-                                            <td style={{ textAlign: 'right' }}>
-                                                <span className={`chip ${m.status === 'Completed' ? 'green' : m.status === 'In Progress' ? 'blue' : 'orange'}`}>
+                                            <td style={styles.td}>{m.name}</td>
+                                            <td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold' }}>{m.plan}</td>
+                                            <td style={{ ...styles.td, textAlign: 'center', color: '#10B981' }}>{m.done}</td>
+                                            <td style={{ ...styles.td, textAlign: 'center', color: m.rem > 0 ? '#F97316' : '#64748b' }}>{m.rem}</td>
+                                            <td style={{ ...styles.td, textAlign: 'right' }}>
+                                                <span style={styles.chip(m.status)}>
                                                     {m.status}
                                                 </span>
                                             </td>
@@ -177,39 +496,45 @@ export const ProductionDashboard: React.FC = () => {
                     </div>
 
                     {/* 4. Kitchen Prep Status */}
-                    <div className="section-panel">
-                        <div className="panel-header">
-                            <h3>Active Batches & Prep</h3>
+                    <div style={styles.sectionPanel}>
+                        <div style={styles.panelHeader}>
+                            <h3 style={styles.panelTitle}>Active Batches & Prep</h3>
                         </div>
-                        <div className="table-wrapper">
-                            <table className="data-table">
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={styles.table}>
                                 <thead>
                                     <tr>
-                                        <th>Batch ID</th>
-                                        <th>Meal</th>
-                                        <th>Staff</th>
-                                        <th>Start Time</th>
-                                        <th>Status</th>
-                                        <th style={{ textAlign: 'right' }}>Actions</th>
+                                        <th style={styles.th}>Batch ID</th>
+                                        <th style={styles.th}>Meal</th>
+                                        <th style={styles.th}>Staff</th>
+                                        <th style={styles.th}>Start Time</th>
+                                        <th style={styles.th}>Status</th>
+                                        <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {PREP_STATUS.map(batch => (
                                         <tr key={batch.id}>
-                                            <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>{batch.id}</td>
-                                            <td>
+                                            <td style={{ ...styles.td, fontFamily: 'monospace', color: '#94a3b8' }}>{batch.id}</td>
+                                            <td style={styles.td}>
                                                 {batch.meal}
                                                 {batch.delay && <div style={{ fontSize: '0.75rem', color: '#EF4444' }}>{batch.delay}</div>}
                                             </td>
-                                            <td>{batch.staff}</td>
-                                            <td>{batch.start}</td>
-                                            <td>
-                                                <span className={`chip ${batch.status === 'Active' ? 'blue' : batch.status === 'Delayed' ? 'red' : 'gray'}`}>
+                                            <td style={styles.td}>{batch.staff}</td>
+                                            <td style={styles.td}>{batch.start}</td>
+                                            <td style={styles.td}>
+                                                <span style={styles.chip(batch.status)}>
                                                     {batch.status}
                                                 </span>
                                             </td>
-                                            <td style={{ textAlign: 'right' }}>
-                                                <button className="btn-sm-action">Manage</button>
+                                            <td style={{ ...styles.td, textAlign: 'right' }}>
+                                                <button
+                                                    style={styles.btnSmAction}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#FF7A18'; e.currentTarget.style.color = 'white'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#FF7A18'; }}
+                                                >
+                                                    Manage
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -219,46 +544,44 @@ export const ProductionDashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Right Column: Dispatch, Inventory, Alerts */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-                    {/* 7. Alerts (Moved up as per urgency visual hierarchy usually, but prompt said bottom. 
-                        However, "Action Required" usually sits nicely at top or side. I'll put it top of side column) */}
-                    <div className="section-panel" style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}>
-                        <div className="panel-header">
-                            <h3 style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {/* Right Column */}
+                <div style={styles.col}>
+                    {/* Alerts */}
+                    <div style={{ ...styles.sectionPanel, borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+                        <div style={styles.panelHeader}>
+                            <h3 style={{ ...styles.panelTitle, color: '#EF4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <AlertOctagon size={18} /> Action Required
                             </h3>
                         </div>
-                        <div className="alert-list">
+                        <div style={styles.alertList}>
                             {ALERTS.map(alert => (
-                                <div key={alert.id} className={`alert-item ${alert.type}`}>
+                                <div key={alert.id} style={styles.alertItem(alert.type)}>
                                     <div style={{ paddingTop: '2px' }}>
                                         {alert.type === 'critical' ? <AlertTriangle size={16} color="#EF4444" /> : <Clock size={16} color="#F59E0B" />}
                                     </div>
-                                    <div className="alert-content">
-                                        <p>{alert.msg}</p>
-                                        <span className="alert-action">{alert.action} &rarr;</span>
+                                    <div>
+                                        <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.9)' }}>{alert.msg}</p>
+                                        <span style={styles.alertAction(alert.type)}>{alert.action} &rarr;</span>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* 5. Dispatch Readiness */}
-                    <div className="section-panel">
-                        <div className="panel-header">
-                            <h3>Dispatch Readiness</h3>
-                            <Truck size={18} className="text-muted" />
+                    {/* Dispatch Readiness */}
+                    <div style={styles.sectionPanel}>
+                        <div style={styles.panelHeader}>
+                            <h3 style={styles.panelTitle}>Dispatch Readiness</h3>
+                            <Truck size={18} className="text-muted" style={{ color: 'rgba(255,255,255,0.6)' }} />
                         </div>
-                        <div className="dispatch-stat-grid">
-                            <div className="dispatch-stat-item">
-                                <span className="val" style={{ color: '#10B981' }}>12</span>
-                                <span className="lab">Ready</span>
+                        <div style={styles.dispatchGrid}>
+                            <div style={styles.dispatchItem}>
+                                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#10B981' }}>12</span>
+                                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Ready</span>
                             </div>
-                            <div className="dispatch-stat-item">
-                                <span className="val" style={{ color: '#F59E0B' }}>5</span>
-                                <span className="lab">Pending Prep</span>
+                            <div style={styles.dispatchItem}>
+                                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#F59E0B' }}>5</span>
+                                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Pending Prep</span>
                             </div>
                         </div>
                         <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.1)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.85rem', color: '#FCA5A5' }}>
@@ -266,37 +589,41 @@ export const ProductionDashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 6. Inventory Snapshot */}
-                    <div className="section-panel">
-                        <div className="panel-header">
-                            <h3>Inventory Snapshot</h3>
-                            <Package size={18} className="text-muted" />
+                    {/* Inventory Snapshot */}
+                    <div style={styles.sectionPanel}>
+                        <div style={styles.panelHeader}>
+                            <h3 style={styles.panelTitle}>Inventory Snapshot</h3>
+                            <Package size={18} className="text-muted" style={{ color: 'rgba(255,255,255,0.6)' }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {INVENTORY_SNAPSHOT.map(inv => (
-                                <div key={inv.key} className="inv-item">
+                                <div key={inv.key} style={styles.invItem}>
                                     <div style={{ flex: 1 }}>
-                                        <div className="inv-name">{inv.name}</div>
+                                        <div style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>{inv.name}</div>
                                         <span style={{ fontSize: '0.75rem', color: inv.status === 'critical' ? '#EF4444' : '#64748b' }}>
                                             {inv.rem} Remaining
                                         </span>
                                     </div>
-                                    <div className="inv-bar-bg">
+                                    <div style={styles.barBg}>
                                         <div
-                                            className="inv-bar-fill"
-                                            style={{ width: `${inv.percent}%`, background: inv.status === 'critical' ? '#EF4444' : '#10B981' }}>
-                                        </div>
+                                            style={{
+                                                height: '100%',
+                                                borderRadius: '2px',
+                                                width: `${inv.percent}%`,
+                                                background: inv.status === 'critical' ? '#EF4444' : '#10B981'
+                                            }}
+                                        ></div>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <button className="btn-secondary w-full mt-4" style={{ marginTop: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                        <button style={{ marginTop: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '100%' }}>
                             Request Replenishment
                         </button>
                     </div>
-
                 </div>
             </div>
         </div>
     );
 };
+

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import { vendorClient } from '../api/vendorClient';
 
 export type UserRole = 'SUPER_ADMIN' | 'OPS' | 'VENDOR_ADMIN' | 'VENDOR_STAFF';
 
@@ -12,7 +13,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     role: UserRole;
     user: User;
-    login: (email: string, pass: string) => boolean;
+    login: (email: string, pass: string) => Promise<boolean>;
     logout: () => void;
     switchRole: (role: UserRole) => void;
 }
@@ -31,16 +32,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [role, setRole] = useState<UserRole>('SUPER_ADMIN');
     const [user, setUser] = useState<User>({ name: '', avatar: '', email: '' });
 
-    const login = (email: string, pass: string) => {
-        const creds = CREDENTIALS[email as keyof typeof CREDENTIALS];
-        if (creds && creds.pass === pass) {
+    const login = async (email: string, pass: string): Promise<boolean> => {
+        // 1. Super Admin Mock (Keep for now as per scope)
+        if (email === 'admin@aaharly.com' && pass === 'admin123') {
             setIsAuthenticated(true);
-            setRole(creds.role as UserRole);
-            setUser({ name: creds.name, avatar: creds.avatar, email });
-            // Simulate receiving a token from backend
+            setRole('SUPER_ADMIN');
+            setUser({ name: 'Super Admin', avatar: 'SA', email });
             localStorage.setItem('admin_token', 'mock_admin_token_safe_for_dev');
             return true;
         }
+
+        // 2. Real Vendor API Login
+        try {
+            const response = await vendorClient.login({ email, password: pass });
+            if (response.success) {
+                setIsAuthenticated(true);
+                // Map API role to Context Role
+                // API returns 'VENDOR', we map to 'VENDOR_ADMIN' for now as primary vendor user
+                setRole('VENDOR_ADMIN');
+                setUser({
+                    name: response.vendor.name,
+                    avatar: response.vendor.name.substring(0, 2).toUpperCase(),
+                    email: response.vendor.email
+                });
+                localStorage.setItem('vendor_token', response.accessToken);
+                return true;
+            }
+        } catch (err) {
+            console.error('Vendor login failed:', err);
+        }
+
         return false;
     };
 
@@ -49,6 +70,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setRole('SUPER_ADMIN'); // Reset default
         setUser({ name: '', avatar: '', email: '' });
         localStorage.removeItem('admin_token');
+        localStorage.removeItem('vendor_token');
     };
 
     const switchRole = (newRole: UserRole) => {

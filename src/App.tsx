@@ -14,6 +14,8 @@ import { InventoryPage } from './pages/vendor/InventoryPage';
 import { DispatchCenter } from './pages/vendor/DispatchCenter';
 import { KitchenPrepPage } from './pages/vendor/KitchenPrepPage';
 import { VendorsPage } from './pages/VendorsPage';
+import { CustomersPage } from './pages/vendor/CustomersPage';
+
 
 // Guard Component to handle redirections based on auth status and role
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -60,6 +62,7 @@ function App() {
             <Route path="subscriptions" element={<SubscriptionsPage />} />
 
             {/* Vendor Routes */}
+            <Route path="vendor/customers" element={<CustomersPage />} />
             <Route path="vendor/production" element={<ProductionDashboard />} />
             <Route path="vendor/kitchen" element={<KitchenPrepPage />} />
             <Route path="vendor/dispatch" element={<DispatchCenter />} />

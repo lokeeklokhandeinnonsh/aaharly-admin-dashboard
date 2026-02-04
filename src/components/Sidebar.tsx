@@ -59,6 +59,7 @@ const navGroups: NavGroup[] = [
         title: 'Vendor Team',
         allowedRoles: VENDOR_ONLY,
         items: [
+            { icon: Users, label: 'Assigned Customers', path: '/vendor/customers' },
             { icon: Users, label: 'My Staff', path: '/vendor/staff' },
         ]
     },
