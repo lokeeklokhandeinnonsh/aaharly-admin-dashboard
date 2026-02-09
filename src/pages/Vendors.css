@@ -1,81 +1,32 @@
+/* ═══════════════════════════════════════════════════════════════
+   VENDORS PAGE - PREMIUM GLASSMORPHISM DESIGN
+   ═══════════════════════════════════════════════════════════════ */
+
 .vendors-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 24px;
 }
 
-.vendor-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.25rem;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.vendor-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.vendor-main-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex: 1;
-}
-
-.vendor-avatar-lg {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-accent), #FF8500);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: white;
-  box-shadow: 0 4px 10px rgba(255, 122, 0, 0.3);
-}
-
-.vendor-text h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.vendor-meta {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.vendor-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: flex-end;
-  margin-right: 1.5rem;
-}
-
-/* Reusing generic classes from Users.css (page-actions-bar, search, etc.) 
-   Assuming they are imported or global, but Users.css defined them locally?
-   Yes, Users.css defined them. So I should include them here too.
-*/
+/* ═══════════════════════════════════════════════════════════════
+   HEADER & ACTIONS
+   ═══════════════════════════════════════════════════════════════ */
 
 .page-actions-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  border-radius: 16px;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 16px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .search-input-wrapper {
@@ -86,7 +37,7 @@
 
 .search-input-wrapper .search-icon {
   position: absolute;
-  left: 1rem;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-muted);
@@ -94,204 +45,305 @@
 
 .search-input-wrapper input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-card-border);
-  border-radius: var(--radius-full);
-  padding: 0.6rem 1rem 0.6rem 2.8rem;
-  color: white;
+  padding: 11px 16px 11px 48px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
   outline: none;
-  font-family: inherit;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .search-input-wrapper input:focus {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.4);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.1),
+              inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .actions-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
+
+.btn-secondary, .btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-accent), #FF4D00);
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 122, 0, 0.4);
+}
+
+.custom-select select {
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VENDORS GRID
+   ═══════════════════════════════════════════════════════════════ */
 
 .vendors-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); /* Slightly wider for vendors */
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+
+.vendor-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 24px; /* More padding */
+  border-radius: 20px; /* Softer corners */
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08); /* Glow effect base */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  overflow: visible;
+  gap: 20px;
+}
+
+.vendor-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 122, 0, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(255, 122, 0, 0.1), /* Glow */
+              0 0 24px rgba(255, 122, 0, 0.05);
+}
+
+/* Card Header: Avatar + Title */
+.vendor-main-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.vendor-avatar-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--color-accent), #FF4D00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem; /* Larger icon */
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 8px 20px rgba(255, 122, 0, 0.3),
+              inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.vendor-card:hover .vendor-avatar-lg {
+  transform: scale(1.05) rotate(-5deg);
+}
+
+.vendor-text h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 6px 0;
+  line-height: 1.2;
+}
+
+.vendor-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+
+/* Stats Row in Card */
+.vendor-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-right: 0; /* Reset */
+  width: 100%;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
+  gap: 8px;
+  font-size: 0.95rem; /* readable size */
   color: var(--color-text-muted);
 }
 
 .stat-item.highlight {
   color: var(--color-accent);
-  font-weight: 500;
-}
-
-.action-menu-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-}
-
-.action-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-/* Drawer styles reuse */
-.drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 60;
-  animation: fadeIn 0.3s ease;
-}
-
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 450px; /* Wider drawer for vendor details */
-  height: 100vh;
-  background: #0B0E21;
-  z-index: 70;
-  display: flex;
-  flex-direction: column;
-  animation: slideIn 0.3s ease;
-  border-left: 1px solid var(--color-card-border);
-}
-
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.drawer-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--color-card-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.close-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-
-.close-btn:hover { color: white; }
-
-.drawer-content {
-  padding: 1.5rem;
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.vendor-profile-hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background: rgba(255,255,255,0.02);
-    padding: 2rem;
-    border-radius: var(--radius-lg);
-}
-
-.drawer-section h4 {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  margin-bottom: 1rem;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  padding-bottom: 0.5rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.stat-box {
-  background: rgba(255, 255, 255, 0.03);
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  text-align: center;
-}
-
-.stat-box .label {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.stat-box .value {
-  font-size: 1.25rem;
+  background: rgba(255, 122, 0, 0.1);
+  padding: 6px 12px;
+  border-radius: 8px;
   font-weight: 600;
-  color: var(--color-text-primary);
 }
 
-.info-grid {
-    display: grid;
-    gap: 1rem;
+/* Status Badge - Floating or Inline */
+.status-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(4px);
+  border: 1px solid transparent;
+  z-index: 2;
 }
 
-.info-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
+.status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
-.info-row label {
-    color: var(--color-text-muted);
-    font-size: 0.9rem;
+.status-inactive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
-.info-row span {
-    color: var(--color-text-primary);
-    text-align: right;
+/* Hover Actions Pill */
+.vendor-actions-pill {
+  position: absolute;
+  top: 16px;
+  right: 16px; 
+  /* Status badge is there, so let's move actions to bottom right or maybe hover replaces status?
+     Or put actions at bottom right? 
+     Let's put actions at top right but ensure z-index handling or shift status.
+     Actually, better design: Status at top right. Actions appear on hover over the image or overlay?
+     Let's keep user's request: "Edit/Delete icons spacing... Hover states".
+     Let's simple put actions pill at BOTTOM RIGHT on hover, or overlap status?
+     Let's try overlaying status on hover.
+  */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  opacity: 0;
+  transform: translateY(-10px) scale(0.9);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 10;
 }
+
+.vendor-card:hover .vendor-actions-pill {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Adjust status badge so it doesn't conflict if we put actions elsewhere.
+   Actually, let's put actions at Top Right, and move Status to Top Left?
+   Or put Actions next to Status?
+   Let's just hide status on hover and show actions? No, status is important.
+   Let's put actions pill slightly below status?
+   Or Top Right is Status, Bottom Right is Actions?
+   Let's go with Actions overlaying Status on hover for cleaner look, or side-by-side.
+   Let's try side-by-side if space allows, or just Actions at top right and Status moved to inside layout.
+   Actually, the design in Users page doesn't have cards.
+   I'll assume Status is always visible at Top Right.
+   Actions Pill will appear at *Bottom Right* of the header section (over image?) or Top Left?
+   Let's place Actions Pill at Top Right, shifting Status to the left?
+   No, let's place Actions Pill at Top Right (absolute), and Status at Bottom Right (absolute)? 
+   Let's stick to: Status Top Right. Actions Pill Top *Left*?
+   Let's try Actions Pill at Top Right covering Status? (Might range).
+   Let's do: Status Top Right. Actions appear to the left of Status on hover.
+*/
+
+.vendor-card:hover .status-badge {
+    /* Optional: fade out status to show actions? */
+    /* opacity: 0; */
+}
+
+.vendor-actions-pill {
+    top: 12px;
+    right: 12px;
+    /* If we want to hide status, we can. But better to just position absolute. */
+}
+
+/* Let's move Status to be inline in stats or next to title?
+   No, badge is nice.
+   Let's position Status at Top Right.
+   Position Actions at Top Right as well, but `right: 50%`?
+   Let's just put Actions at Bottom Right of the card?
+*/
+.vendor-actions-pill {
+    top: auto;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGINATION
+   ═══════════════════════════════════════════════════════════════ */
 
 .pagination-bar {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 8px;
+  margin-top: 2rem;
+  padding: 1rem;
 }
 
 .page-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid transparent;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
@@ -300,13 +352,35 @@
   transition: all 0.2s;
 }
 
-.page-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+.page-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
 }
 
 .page-btn.active {
   background: var(--color-accent);
   color: white;
+  border-color: transparent;
   box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
-  font-weight: 600;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DRAWER & SKELETONS (Reuse existing but enhance)
+   ═══════════════════════════════════════════════════════════════ */
+.skeleton-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.skeleton-circle {
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+}
+.skeleton-line {
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
 }

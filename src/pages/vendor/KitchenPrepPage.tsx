@@ -1,28 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Users,
     Utensils,
     CheckSquare,
-    AlertCircle
+    AlertCircle,
+    RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-const PREP_TASKS = [
-    { id: 1, meal: 'Grilled Chicken Salad', station: 'Cold Prep', qty: 45, status: 'done', assignee: 'John D.' },
-    { id: 2, meal: 'Vegan Buddha Bowl', station: 'Assembly', qty: 22, status: 'active', assignee: 'Sarah M.' },
-    { id: 3, meal: 'Protein Shake (Choco)', station: 'Beverage', qty: 60, status: 'pending', assignee: 'Unassigned' },
-];
+import { vendorClient } from '../../services/vendorClient';
+import type { KitchenBatch } from '../../services/vendorClient';
 
 export const KitchenPrepPage: React.FC = () => {
     const { role } = useAuth();
     const isManager = role === 'VENDOR_ADMIN';
-    const [hoveredTask, setHoveredTask] = useState<number | null>(null);
+    const [hoveredTask, setHoveredTask] = useState<string | null>(null);
+    const [batches, setBatches] = useState<KitchenBatch[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchBatches = async () => {
+        try {
+            setLoading(true);
+            const data = await vendorClient.getDailyProduction();
+            setBatches(data.batches);
+            setError(null);
+        } catch (err) {
+            console.error('Failed to fetch kitchen batches:', err);
+            setError('Failed to load kitchen tasks');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchBatches();
+        const interval = setInterval(fetchBatches, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleMarkComplete = async (batchId: string) => {
+        if (!batchId) return;
+        try {
+            await vendorClient.updateBatchStatus(batchId, 'COMPLETED');
+            setBatches(prev => prev.map(b => b.id === batchId ? { ...b, status: 'COMPLETED' } : b));
+        } catch (err) {
+            console.error('Failed to update batch:', err);
+            alert('Status update failed');
+        }
+    };
 
     const getStatusStyles = (status: string) => {
         switch (status) {
-            case 'done': return { color: '#34D399', bg: 'rgba(16, 185, 129, 0.1)' };
-            case 'active': return { color: '#60A5FA', bg: 'rgba(59, 130, 246, 0.1)' };
-            default: return { color: '#94A3B8', bg: 'rgba(51, 65, 85, 0.3)' }; // pending
+            case 'COMPLETED': return { color: '#34D399', bg: 'rgba(16, 185, 129, 0.1)' };
+            case 'IN_PROGRESS': return { color: '#60A5FA', bg: 'rgba(59, 130, 246, 0.1)' };
+            default: return { color: '#94A3B8', bg: 'rgba(51, 65, 85, 0.3)' }; // PENDING
         }
     };
 
@@ -173,6 +204,12 @@ export const KitchenPrepPage: React.FC = () => {
             gap: '0.5rem',
             cursor: 'pointer',
             transition: 'opacity 0.2s',
+        },
+        loadingState: {
+            gridColumn: '1 / -1',
+            textAlign: 'center' as const,
+            padding: '3rem',
+            color: 'rgba(255,255,255,0.5)'
         }
     };
 
@@ -191,69 +228,71 @@ export const KitchenPrepPage: React.FC = () => {
                         {isManager ? 'Monitor station status and reassign staff.' : 'Your assigned tasks for today.'}
                     </p>
                 </div>
-                {isManager && (
-                    <div className="header-actions">
-                        <span style={styles.alertPill}>
-                            <AlertCircle size={14} /> 2 Delays Reported
-                        </span>
-                    </div>
-                )}
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button onClick={fetchBatches} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                        <RefreshCw size={18} />
+                    </button>
+                    {isManager && (
+                        <div className="header-actions">
+                            <span style={styles.alertPill}>
+                                <AlertCircle size={14} /> Live
+                            </span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div style={styles.grid}>
-                {PREP_TASKS.map(task => (
-                    <div
-                        key={task.id}
-                        style={styles.card(hoveredTask === task.id)}
-                        onMouseEnter={() => setHoveredTask(task.id)}
-                        onMouseLeave={() => setHoveredTask(null)}
-                    >
-                        <div style={styles.cardTop}>
-                            <div style={styles.cardHeader}>
-                                <span style={styles.stationLabel}>{task.station}</span>
-                                <span style={styles.statusBadge(task.status)}>
-                                    {task.status}
-                                </span>
+                {loading ? (
+                    <div style={styles.loadingState}>Loading production batches...</div>
+                ) : error ? (
+                    <div style={styles.loadingState}>{error}</div>
+                ) : batches.length === 0 ? (
+                    <div style={styles.loadingState}>No production batches generated yet.</div>
+                ) : (
+                    batches.map(task => (
+                        <div
+                            key={task.id || task.mealId}
+                            style={styles.card(hoveredTask === (task.id || task.mealId))}
+                            onMouseEnter={() => setHoveredTask(task.id || task.mealId)}
+                            onMouseLeave={() => setHoveredTask(null)}
+                        >
+                            <div style={styles.cardTop}>
+                                <div style={styles.cardHeader}>
+                                    <span style={styles.stationLabel}>Batch #{task.id?.substring(0, 6) || 'N/A'}</span>
+                                    <span style={styles.statusBadge(task.status)}>
+                                        {task.status}
+                                    </span>
+                                </div>
+                                <h3 style={styles.prepTitle}>{task.mealName}</h3>
+                                <div style={styles.meta}>
+                                    <span style={styles.metaItem}><Utensils size={14} /> {task.completedQuantity} / {task.targetQuantity} units</span>
+                                    {isManager && (
+                                        <span style={styles.metaItem}><Users size={14} /> auto-assigned</span>
+                                    )}
+                                </div>
                             </div>
-                            <h3 style={styles.prepTitle}>{task.meal}</h3>
-                            <div style={styles.meta}>
-                                <span style={styles.metaItem}><Utensils size={14} /> {task.qty} units</span>
-                                {isManager && (
-                                    <span style={styles.metaItem}><Users size={14} /> {task.assignee}</span>
+
+                            <div style={styles.actions}>
+                                {task.status !== 'COMPLETED' ? (
+                                    <button
+                                        style={styles.btnPrimary}
+                                        onClick={() => task.id && handleMarkComplete(task.id)}
+                                        disabled={!task.id}
+                                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                                    >
+                                        <CheckSquare size={16} /> Mark Complete
+                                    </button>
+                                ) : (
+                                    <div style={{ ...styles.btnPrimary, background: '#10B981' }}>
+                                        <CheckSquare size={16} /> Done
+                                    </div>
                                 )}
                             </div>
                         </div>
-
-                        <div style={styles.actions}>
-                            {isManager ? (
-                                <>
-                                    <button
-                                        style={styles.btnSecondary}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
-                                    >
-                                        Reassign
-                                    </button>
-                                    <button
-                                        style={styles.btnGhost}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 122, 0, 0.1)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        View Details
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    style={styles.btnPrimary}
-                                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                                >
-                                    <CheckSquare size={16} /> Mark Complete
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
         </div>
     );

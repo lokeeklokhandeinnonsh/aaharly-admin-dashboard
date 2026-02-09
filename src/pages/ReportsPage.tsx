@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     BarChart2,
     TrendingUp,
@@ -19,9 +19,11 @@ import {
     Cell
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import { reportClient, type AdminReportsResponse } from '../api/reportClient';
+import toast from 'react-hot-toast';
 import './Reports.css';
 
-// Vendor Data
+// Vendor Data (Static for now as API focus is Admin)
 const PRODUCTION_EFFICIENCY_DATA = [
     { name: 'Completed', value: 85 },
     { name: 'Pending', value: 10 },
@@ -37,17 +39,42 @@ const DELIVERY_SUCCESS_DATA = [
     { day: 'Fri', success: 94 },
 ];
 
-// Admin Data
-const VENDOR_RANKING_DATA = [
-    { name: 'Healthy Eats (BLR)', score: 92 },
-    { name: 'FitFoods (MUM)', score: 88 },
-    { name: 'KetoKitchen (DEL)', score: 75 },
-    { name: 'VeganVibes (PUNE)', score: 60 },
-];
-
 export const ReportsPage: React.FC = () => {
     const { role } = useAuth();
     const isVendor = role.includes('VENDOR');
+
+    const [reports, setReports] = useState<AdminReportsResponse | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!isVendor) {
+            const fetchReports = async () => {
+                setLoading(true);
+                try {
+                    const data = await reportClient.getReports();
+                    setReports(data);
+                } catch (error) {
+                    console.error('Failed to load reports', error);
+                    toast.error('Failed to load reports');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchReports();
+        }
+    }, [isVendor]);
+
+    // Transform API data for charts
+    const vendorRankingData = reports?.delays?.map(d => ({
+        name: d.vendorName,
+        score: Math.max(0, 100 - (d.avgDelayMinutes * 2)) // Mock score logic based on delay
+    })) || [];
+
+    const growthData = reports?.growth?.map(g => ({
+        date: new Date(g.date).getDate(), // Show day
+        users: g.newUsers,
+        subs: g.newSubscriptions
+    })) || [];
 
     return (
         <div className="reports-page">
@@ -143,45 +170,48 @@ export const ReportsPage: React.FC = () => {
                     </div>
                 </div>
             ) : (
-                // ADMIN REPORTS
+                // ADMIN REPORTS (Connected to API)
                 <div className="reports-grid admin-grid">
-                    <div className="report-card glass-panel col-span-2">
-                        <div className="card-header">
-                            <h3>Vendor Performance Ranking</h3>
-                            <BarChart2 size={18} className="text-muted" />
-                        </div>
-                        <div style={{ width: '100%', height: 350 }}>
-                            <ResponsiveContainer>
-                                <BarChart data={VENDOR_RANKING_DATA} layout="vertical" margin={{ left: 40 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                    <XAxis type="number" stroke="#64748B" />
-                                    <YAxis dataKey="name" type="category" stroke="#94A3B8" width={120} />
-                                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1E293B', border: 'none' }} />
-                                    <Bar dataKey="score" fill="#FF7A00" radius={[0, 4, 4, 0]} barSize={20} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
+                    {loading ? (
+                        <div className="col-span-3 text-center py-10 text-gray-400">Loading insights...</div>
+                    ) : (
+                        <>
+                            <div className="report-card glass-panel col-span-2">
+                                <div className="card-header">
+                                    <h3>Vendor Performance Score (Reverse Delay Metric)</h3>
+                                    <BarChart2 size={18} className="text-muted" />
+                                </div>
+                                <div style={{ width: '100%', height: 350 }}>
+                                    <ResponsiveContainer>
+                                        <BarChart data={vendorRankingData} layout="vertical" margin={{ left: 40 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                            <XAxis type="number" stroke="#64748B" />
+                                            <YAxis dataKey="name" type="category" stroke="#94A3B8" width={120} />
+                                            <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1E293B', border: 'none' }} />
+                                            <Bar dataKey="score" fill="#FF7A00" radius={[0, 4, 4, 0]} barSize={20} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
 
-                    <div className="report-card glass-panel">
-                        <div className="card-header">
-                            <h3>System Health</h3>
-                        </div>
-                        <div className="health-stats">
-                            <div className="h-stat">
-                                <span>Active Orders</span>
-                                <h3>1,204</h3>
+                            <div className="report-card glass-panel">
+                                <div className="card-header">
+                                    <h3>User Growth (Last 7 Days)</h3>
+                                </div>
+                                <div style={{ width: '100%', height: 250, marginTop: '1rem' }}>
+                                    <ResponsiveContainer>
+                                        <BarChart data={growthData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                            <XAxis dataKey="date" stroke="#64748B" />
+                                            <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1E293B', border: 'none' }} />
+                                            <Bar dataKey="users" fill="#10B981" radius={[4, 4, 0, 0]} name="New Users" />
+                                            <Bar dataKey="subs" fill="#3B82F6" radius={[4, 4, 0, 0]} name="New Subs" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
-                            <div className="h-stat">
-                                <span>Delayed Deliveries</span>
-                                <h3 className="text-danger">12</h3>
-                            </div>
-                            <div className="h-stat">
-                                <span>New Subs (Today)</span>
-                                <h3 className="text-success">54</h3>
-                            </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>

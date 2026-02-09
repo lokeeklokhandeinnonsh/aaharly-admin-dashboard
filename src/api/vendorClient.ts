@@ -77,30 +77,42 @@ export interface ReportResponse {
 
 // RESTORED CUSTOMER TYPE - Required for CustomersPage
 export interface VendorCustomer {
-    userId: string;
+    id: string; // Changed from userId to match backend
     name: string;
-    phone: string;
     email: string;
-    gender: string;
-    age: number;
-    pincode: string;
-    address: string;
-    subscription: {
+    mobile: string;
+    img: string | null;
+    addresses: {
+        id: string;
+        address: string;
+        pincode: string;
+        details: string;
+        type: string;
+        isDefault: boolean;
+    }[];
+    subscriptions: {
+        id: string;
         planName: string;
         category: string;
-        status: 'active' | 'paused' | 'expired';
+        status: string;
         startDate: string;
         endDate: string;
-    };
-    mealPlan: {
-        name: string;
-        mealsPerDay: number;
-    };
-    vendor: {
+    }[];
+    deliveries: {
         id: string;
-        name: string;
-    };
-    createdAt: string;
+        date: string;
+        mealType: string;
+        category: string;
+        planName: string;
+        address: {
+            id: string;
+            address: string;
+            pincode: string;
+            details: string;
+            type: string;
+        } | null;
+        status: string;
+    }[];
 }
 
 
@@ -117,9 +129,6 @@ const getHeaders = () => {
 export const vendorClient = {
     // Auth
     login: async (creds: VendorLoginRequest): Promise<VendorLoginResponse> => {
-        // Log payload for debugging 401 errors
-        console.log('Sending Login Request:', JSON.stringify(creds));
-
         const response = await fetch(`${API_BASE_URL}/vendor/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -134,20 +143,37 @@ export const vendorClient = {
     },
 
     // CUSTOMERS
-    getCustomers: async (): Promise<VendorCustomer[]> => {
-        const response = await fetch(`${API_BASE_URL}/vendor/customers`, {
+    // CUSTOMERS
+    getCustomers: async (page = 1, limit = 20, search = ''): Promise<{ data: VendorCustomer[], total: number }> => {
+        const query = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            search
+        });
+        const response = await fetch(`${API_BASE_URL}/vendor/customers?${query}`, {
             headers: getHeaders(),
         });
 
         if (!response.ok) {
-            // If backend is not ready loop-back to valid but empty data to prevent crash
-            console.warn(`getCustomers failed: ${response.status}`);
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.message || 'Failed to fetch customers');
+            let errorMessage = `Failed to fetch customers (${response.status})`;
+            try {
+                const err = await response.json();
+                if (err.message) errorMessage = err.message;
+            } catch (e) {
+                console.warn('Failed to parse error response', e);
+            }
+            throw new Error(errorMessage);
         }
 
         const result = await response.json();
-        return result.data || result;
+        // Support both { data: [...], meta: { total: ... } } and direct array if backend differs
+        const data = result.data || result;
+        const total = result.meta?.total || result.total || (Array.isArray(data) ? data.length : 0);
+
+        return {
+            data: Array.isArray(data) ? data : [],
+            total
+        };
     },
 
     // Production

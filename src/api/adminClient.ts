@@ -5,7 +5,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:40
 
 export const getAuthToken = () => localStorage.getItem('admin_token');
 
-const getHeaders = () => {
+export const getHeaders = () => {
     const token = getAuthToken();
     return {
         'Content-Type': 'application/json',
@@ -266,6 +266,105 @@ export const adminClient = {
         if (!response.ok) throw new Error('Failed to bulk set calendar');
         const result = await response.json();
         return result.data || result;
+    },
+
+    // Vendors
+    getVendors: async (): Promise<Vendor[]> => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/vendors`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed to fetch vendors');
+            const result = await response.json();
+            return result.data || result;
+        } catch (e) {
+            console.error('Error in getVendors:', e);
+            return [];
+        }
+    },
+
+    getVendorById: async (id: string): Promise<Vendor> => {
+        const response = await fetch(`${API_BASE_URL}/admin/vendors/${id}`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch vendor');
+        const result = await response.json();
+        return result.data || result;
+    },
+
+    createVendor: async (payload: CreateVendorPayload): Promise<Vendor> => {
+        const response = await fetch(`${API_BASE_URL}/admin/vendors`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error('Failed to create vendor');
+        const result = await response.json();
+        return result.data || result;
+    },
+
+    updateVendor: async (id: string, payload: UpdateVendorPayload): Promise<Vendor> => {
+        const response = await fetch(`${API_BASE_URL}/admin/vendors/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error('Failed to update vendor');
+        const result = await response.json();
+        return result.data || result;
+    },
+
+    deleteVendor: async (id: string): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/admin/vendors/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        if (!response.ok) throw new Error('Failed to delete vendor');
+    },
+
+    updateVendorStatus: async (id: string, status: 'active' | 'inactive'): Promise<Vendor> => {
+        const response = await fetch(`${API_BASE_URL}/admin/vendors/${id}/status`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify({ status }),
+        });
+        if (!response.ok) throw new Error('Failed to update vendor status');
+        const result = await response.json();
+        return result.data || result;
+    },
+
+    // Subscriptions
+    getSubscriptions: async (): Promise<Subscription[]> => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/subscriptions`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed to fetch subscriptions');
+            const result = await response.json();
+            return result.data || result;
+        } catch (e) {
+            console.error('Error in getSubscriptions:', e);
+            return [];
+        }
+    },
+
+    getSubscriptionStats: async (): Promise<SubscriptionStats> => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/subscriptions/stats`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed to fetch subscription stats');
+            const result = await response.json();
+            return result.data || result;
+        } catch (e) {
+            console.error('Error in getSubscriptionStats:', e);
+            return {
+                totalSubscriptions: 0,
+                activeSubscriptions: 0,
+                pausedSubscriptions: 0,
+                expiredSubscriptions: 0,
+                monthlyRevenue: 0,
+            };
+        }
+    },
+
+    getSubscriptionById: async (id: string): Promise<Subscription> => {
+        const response = await fetch(`${API_BASE_URL}/admin/subscriptions/${id}`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch subscription');
+        const result = await response.json();
+        return result.data || result;
     }
 };
 
@@ -320,3 +419,67 @@ export type User = {
     updatedAt: string;
     account?: AdminUserAccount | null;
 };
+
+export type Vendor = {
+    id: string;
+    name: string;
+    contact: string | null;
+    address: string | null;
+    status: 'active' | 'inactive' | 'onboarding';
+    activeSubscribers: number;
+    totalOrders: number;
+    rating: number;
+    dailyCapacity: number;
+    pincodes: string[];
+    users: {
+        id: string;
+        name: string;
+        email: string;
+        role: string;
+    }[];
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type CreateVendorPayload = {
+    name: string;
+    contact?: string;
+    address?: string;
+    pincodes?: string[];
+    status?: 'active' | 'inactive';
+};
+
+export type UpdateVendorPayload = {
+    name?: string;
+    contact?: string;
+    address?: string;
+    pincodes?: string[];
+};
+
+export type Subscription = {
+    id: string;
+    userId: string;
+    userName: string;
+    userEmail: string | null;
+    userPhone: string | null;
+    planId: string | null;
+    planName: string;
+    vendorId: string | null;
+    vendorName: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    status: 'active' | 'paused' | 'expired' | null;
+    mealsRemaining: number;
+    totalMeals: number;
+    deliveryAddress: string | null;
+    createdAt: string;
+};
+
+export type SubscriptionStats = {
+    totalSubscriptions: number;
+    activeSubscriptions: number;
+    pausedSubscriptions: number;
+    expiredSubscriptions: number;
+    monthlyRevenue: number;
+};
+

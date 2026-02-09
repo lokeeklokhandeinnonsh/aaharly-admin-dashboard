@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { Bell, Search, User, LogOut, ChevronDown, Shield } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+    Bell,
+    Search,
+    User,
+    LogOut,
+    ChevronDown,
+    Shield,
+    Store,
+    Check,
+    Settings,
+    CreditCard,
+    Sparkles
+} from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import './Header.css';
@@ -13,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
     const { user, role, switchRole, logout } = useAuth();
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Simple breadcrumb logic
     const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -20,11 +33,21 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
         ? pathSegments.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' / ')
         : 'Overview';
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleRoleSwitch = (newRole: UserRole) => {
+        if (role === newRole) return;
         switchRole(newRole);
         setIsDropdownOpen(false);
-        // Optional: Toast message here
-        navigate('/'); // Return to dashboard on role switch to avoid permission errors on current page
+        navigate('/');
     };
 
     const handleLogout = () => {
@@ -32,12 +55,43 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
         navigate('/login');
     };
 
+    const getRoleDetails = (r: UserRole) => {
+        switch (r) {
+            case 'SUPER_ADMIN':
+                return {
+                    label: 'Super Admin',
+                    desc: 'Full system control & oversight',
+                    icon: <Shield size={16} />
+                };
+            case 'VENDOR_ADMIN':
+                return {
+                    label: 'Vendor Admin',
+                    desc: 'Manage kitchen, menu & orders',
+                    icon: <Store size={16} />
+                };
+            case 'VENDOR_STAFF':
+                return {
+                    label: 'Vendor Staff',
+                    desc: 'Process orders & dispatch',
+                    icon: <User size={16} />
+                };
+            default:
+                return {
+                    label: r,
+                    desc: 'Standard User',
+                    icon: <User size={16} />
+                };
+        }
+    };
+
+    const currentRoleDetails = getRoleDetails(role);
+
     return (
         <header className="header">
             <div className="header-left">
                 <h1 className="page-title">{title || (location.pathname === '/' ? 'Dashboard' : breadcrumb)}</h1>
                 <div className="breadcrumb">
-                    <span>Aaharly {role.includes('VENDOR') ? 'Vendor' : 'Admin'}</span>
+                    <span>Aaharly {currentRoleDetails.label}</span>
                     <span className="separator">/</span>
                     <span>{breadcrumb || 'Home'}</span>
                 </div>
@@ -54,51 +108,92 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
                     <span className="badge-dot"></span>
                 </button>
 
-                <div className="profile-container" style={{ position: 'relative' }}>
+                <div className="profile-container" ref={dropdownRef}>
                     <div
-                        className="profile-dropdown-trigger"
+                        className={`profile-dropdown-trigger ${isDropdownOpen ? 'active' : ''}`}
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     >
-                        <div className="avatar-small">{user.avatar}</div>
-                        <div className="profile-meta">
-                            {/* <span className="profile-name">{user.name}</span> */}
-                            {/* Name only visible on larger screens usually, keeping minimal as per design */}
-                            <ChevronDown size={14} className="text-muted" />
+                        <div className="avatar-med">{user.avatar}</div>
+                        <div className="trigger-info">
+                            <span className="trigger-name">{user.name}</span>
+                            <span className="trigger-role">{currentRoleDetails.label}</span>
                         </div>
+                        <ChevronDown size={14} className={`trigger-chevron ${isDropdownOpen ? 'rotate' : ''}`} />
                     </div>
 
                     {isDropdownOpen && (
-                        <div className="role-dropdown-menu">
-                            <div className="dropdown-header">
-                                <span className="dropdown-user-name">{user.name}</span>
-                                <span className="dropdown-user-email">{role.replace('_', ' ')}</span>
+                        <div className="role-switcher-dropdown">
+
+                            {/* Header Section */}
+                            <div className="dropdown-profile-header">
+                                <div className="profile-header-content">
+                                    <div className="avatar-large">
+                                        {user.avatar}
+                                        <span className="status-indicator online"></span>
+                                    </div>
+                                    <div className="profile-header-text">
+                                        <div className="user-name-row">
+                                            <h3>{user.name}</h3>
+                                            <span className="role-badge">{currentRoleDetails.label}</span>
+                                        </div>
+                                        <span className="user-email">{role.toLowerCase().replace('_', ' ')}@aaharly.com</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="dropdown-divider" />
-                            <div className="dropdown-section-title">Switch Role (Dev Mode)</div>
 
-                            <button
-                                className={`dropdown-item ${role === 'SUPER_ADMIN' ? 'active' : ''}`}
-                                onClick={() => handleRoleSwitch('SUPER_ADMIN')}
-                            >
-                                <Shield size={14} /> Super Admin
-                            </button>
-                            <button
-                                className={`dropdown-item ${role === 'VENDOR_ADMIN' ? 'active' : ''}`}
-                                onClick={() => handleRoleSwitch('VENDOR_ADMIN')}
-                            >
-                                <User size={14} /> Vendor Admin
-                            </button>
-                            <button
-                                className={`dropdown-item ${role === 'VENDOR_STAFF' ? 'active' : ''}`}
-                                onClick={() => handleRoleSwitch('VENDOR_STAFF')}
-                            >
-                                <User size={14} className="opacity-75" /> Vendor Staff
-                            </button>
+                            <div className="dropdown-scroll-area">
+                                {/* Role Switcher Section */}
+                                <div className="dropdown-section">
+                                    <h4 className="section-title">Switch Profile</h4>
+                                    <div className="role-list">
+                                        {(['SUPER_ADMIN', 'VENDOR_ADMIN', 'VENDOR_STAFF'] as UserRole[]).map((r) => {
+                                            const details = getRoleDetails(r);
+                                            const isActive = role === r;
+                                            return (
+                                                <div
+                                                    key={r}
+                                                    className={`role-card ${isActive ? 'active' : ''}`}
+                                                    onClick={() => handleRoleSwitch(r)}
+                                                >
+                                                    <div className="role-icon-wrapper">
+                                                        {details.icon}
+                                                    </div>
+                                                    <div className="role-info">
+                                                        <span className="role-label">{details.label}</span>
+                                                        <span className="role-desc">{details.desc}</span>
+                                                    </div>
+                                                    {isActive && <Check size={16} className="active-check" />}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
 
-                            <div className="dropdown-divider" />
-                            <button className="dropdown-item text-danger" onClick={handleLogout}>
-                                <LogOut size={14} /> Logout
-                            </button>
+                                <div className="dropdown-divider"></div>
+
+                                {/* Footer Actions */}
+                                <div className="dropdown-section">
+                                    <button className="menu-item">
+                                        <Settings size={16} />
+                                        <span>Account Settings</span>
+                                    </button>
+                                    <button className="menu-item">
+                                        <CreditCard size={16} />
+                                        <span>Billing & Plans</span>
+                                    </button>
+                                    <button className="menu-item">
+                                        <Sparkles size={16} />
+                                        <span>Feature Requests</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="dropdown-footer">
+                                <button className="logout-btn" onClick={handleLogout}>
+                                    <LogOut size={16} />
+                                    <span>Sign Out</span>
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

@@ -1,82 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Plus,
     Search,
     Calendar,
-    Users,
     ShoppingBag,
     TrendingUp,
-    TrendingDown,
-    X
+    Trash2,
+    RefreshCw
 } from 'lucide-react';
 import './OffersPage.css';
-
-interface Coupon {
-    id: number;
-    code: string;
-    status: 'active' | 'scheduled' | 'expired';
-    description: string;
-    usageCount: number;
-    usageLimit: number;
-    startDate?: string;
-    expiryDate?: string;
-    eligibility: string;
-}
-
-const MOCK_COUPONS: Coupon[] = [
-    {
-        id: 1,
-        code: 'FOODIE50',
-        status: 'active',
-        description: '50% off on all dessert subscriptions',
-        usageCount: 750,
-        usageLimit: 1000,
-        expiryDate: 'Nov 24, 2026',
-        eligibility: 'First-time users'
-    },
-    {
-        id: 2,
-        code: 'LUNCH20',
-        status: 'scheduled',
-        description: '₹500 off on office catering orders',
-        usageCount: 0,
-        usageLimit: 500,
-        startDate: 'Dec 01, 2026',
-        eligibility: 'Min. ₹2000 order'
-    },
-    {
-        id: 3,
-        code: 'WINTER30',
-        status: 'expired',
-        description: 'Early winter clearance on seasonal kits',
-        usageCount: 200,
-        usageLimit: 200,
-        expiryDate: 'Oct 31, 2025',
-        eligibility: 'All users'
-    }
-];
+import { CreateOfferDrawer } from '../components/offers/CreateOfferDrawer';
+import { offerClient } from '../api/offerClient';
+import type { Offer, OfferStats } from '../api/offerClient';
 
 export const OffersPage: React.FC = () => {
     const [filter, setFilter] = useState<'All' | 'Active' | 'Scheduled' | 'Expired'>('All');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [coupons, setCoupons] = useState<Coupon[]>(MOCK_COUPONS);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [offers, setOffers] = useState<Offer[]>([]);
+    const [stats, setStats] = useState<OfferStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
-    // Filter Logic
-    const filteredCoupons = coupons.filter(c => {
-        if (filter === 'All') return true;
-        return c.status.toLowerCase() === filter.toLowerCase();
-    });
-
-    const toggleStatus = (id: number) => {
-        setCoupons(prev => prev.map(c => {
-            if (c.id === id) {
-                // Simple toggle logic for demo
-                const newStatus = c.status === 'active' ? 'expired' : 'active';
-                return { ...c, status: newStatus };
-            }
-            return c;
-        }));
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [offersData, statsData] = await Promise.all([
+                offerClient.getOffers(page, 100), // Fetch 100 to allow client-side filtering for now
+                offerClient.getStats()
+            ]);
+            setOffers(offersData.data);
+            setTotalPages(offersData.totalPages);
+            setStats(statsData);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     };
+
+    useEffect(() => {
+        loadData();
+    }, [page]);
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this offer?")) return;
+        try {
+            await offerClient.deleteOffer(id);
+            setOffers(prev => prev.filter(o => o.id !== id));
+        } catch (error) {
+            console.error(error);
+            alert("Failed to delete offer");
+        }
+    };
+
+    const toggleStatus = async (id: string, currentStatus: string) => {
+        // Optimistic update
+        const originalOffers = [...offers];
+        setOffers(prev => prev.map(o => {
+            if (o.id === id) {
+                return {
+                    ...o,
+                    status: currentStatus === 'active' ? 'disabled' : 'active'
+                };
+            }
+            return o;
+        }));
+
+        try {
+            await offerClient.toggleStatus(id);
+        } catch (error) {
+            console.error(error);
+            // Revert on failure
+            setOffers(originalOffers);
+            alert("Failed to update status");
+        }
+    };
+
+    const filteredCoupons = offers.filter(c => {
+        if (filter === 'All') return true;
+        if (filter === 'Active') return c.status === 'active';
+        if (filter === 'Scheduled') return c.status === 'scheduled';
+        if (filter === 'Expired') return c.status === 'expired' || c.status === 'disabled'; // Group disabled with expired or hide?
+        return true;
+    });
 
     return (
         <div className="offers-page">
@@ -84,18 +93,18 @@ export const OffersPage: React.FC = () => {
             <div className="offer-stats-row">
                 <div className="offer-stat-card">
                     <span className="offer-stat-label">Active Offers</span>
-                    <span className="offer-stat-value">24</span>
-                    <span className="offer-stat-trend trend-up"><TrendingUp size={14} /> +5%</span>
+                    <span className="offer-stat-value">{stats?.activeCount || 0}</span>
+                    <span className="offer-stat-trend trend-up"><TrendingUp size={14} /> +{stats?.growthPercent}%</span>
                 </div>
                 <div className="offer-stat-card">
-                    <span className="offer-stat-label">Total Saved</span>
-                    <span className="offer-stat-value">₹10.5 Lakh</span>
-                    <span className="offer-stat-trend trend-down"><TrendingDown size={14} /> -2%</span>
-                </div>
-                <div className="offer-stat-card">
-                    <span className="offer-stat-label">Redeemed</span>
-                    <span className="offer-stat-value">680</span>
+                    <span className="offer-stat-label">Total Redeemed</span>
+                    <span className="offer-stat-value">{stats?.totalRedeemed || 0}</span>
                     <span className="offer-stat-trend trend-up"><TrendingUp size={14} /> +12%</span>
+                </div>
+                <div className="offer-stat-card">
+                    <span className="offer-stat-label">Growth</span>
+                    <span className="offer-stat-value">{stats?.growthPercent || 0}%</span>
+                    <span className="offer-stat-trend trend-up"><TrendingUp size={14} /> Month/Month</span>
                 </div>
             </div>
 
@@ -113,15 +122,21 @@ export const OffersPage: React.FC = () => {
                             onClick={() => setFilter(f as any)}
                         >
                             {f === 'All' ? 'All Status' : f}
-                            <span style={{ opacity: 0.6 }}>▾</span>
                         </button>
                     ))}
+                    <button className="filter-pill" onClick={loadData}>
+                        <RefreshCw size={14} className={loading && !refreshing ? "animate-spin" : ""} />
+                    </button>
                 </div>
             </div>
 
             {/* Coupon List */}
             <div className="coupon-list">
-                {filteredCoupons.length > 0 ? (
+                {loading && offers.length === 0 ? (
+                    <div className="flex justify-center items-center h-40">
+                        <div className="text-muted">Loading...</div>
+                    </div>
+                ) : filteredCoupons.length > 0 ? (
                     filteredCoupons.map(coupon => (
                         <div key={coupon.id} className="coupon-card">
                             <div className="coupon-header">
@@ -132,25 +147,36 @@ export const OffersPage: React.FC = () => {
                                     </span>
                                 </div>
 
-                                <div
-                                    className={`toggle-switch ${coupon.status === 'active' ? 'on' : ''}`}
-                                    onClick={() => toggleStatus(coupon.id)}
-                                >
-                                    <div className="toggle-thumb" />
+                                <div className="flex gap-2">
+                                    <button className="text-red-400 hover:text-red-300 transition-colors"
+                                        onClick={() => handleDelete(coupon.id)}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                    <div
+                                        className={`toggle-switch ${coupon.status === 'active' ? 'on' : ''}`}
+                                        onClick={() => toggleStatus(coupon.id, coupon.status)}
+                                    >
+                                        <div className="toggle-thumb" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <p className="coupon-desc">{coupon.description}</p>
+                            <p className="coupon-desc">
+                                {coupon.discountType === 'percentage'
+                                    ? `${coupon.discountValue}% OFF`
+                                    : `₹${coupon.discountValue} OFF`}
+                            </p>
 
                             <div className="usage-section">
                                 <div className="usage-header">
-                                    <span>Usage Limit</span>
-                                    <span className="usage-nums">{coupon.usageCount} / {coupon.usageLimit}</span>
+                                    <span>Usage</span>
+                                    <span className="usage-nums">{coupon.usedCount || 0} / {coupon.maxUses || '∞'}</span>
                                 </div>
                                 <div className="usage-track">
                                     <div
                                         className={`usage-fill ${coupon.status === 'expired' ? 'fill-grey' : 'fill-orange'}`}
-                                        style={{ width: `${(coupon.usageCount / coupon.usageLimit) * 100}%` }}
+                                        style={{ width: coupon.maxUses ? `${Math.min(100, ((coupon.usedCount || 0) / coupon.maxUses) * 100)}%` : '0%' }}
                                     />
                                 </div>
                             </div>
@@ -159,15 +185,13 @@ export const OffersPage: React.FC = () => {
                                 <div className="meta-item">
                                     <Calendar size={14} />
                                     {coupon.status === 'scheduled'
-                                        ? `Starts ${coupon.startDate}`
-                                        : coupon.status === 'expired'
-                                            ? `Ended ${coupon.expiryDate}`
-                                            : `Expires ${coupon.expiryDate}`
+                                        ? `Starts ${new Date(coupon.startDate || '').toLocaleDateString()}`
+                                        : `Ends ${new Date(coupon.endDate || '').toLocaleDateString()}`
                                     }
                                 </div>
                                 <div className="meta-item">
-                                    {coupon.status === 'scheduled' ? <ShoppingBag size={14} /> : <Users size={14} />}
-                                    {coupon.eligibility}
+                                    <ShoppingBag size={14} />
+                                    Min ₹{coupon.minOrder || 0}
                                 </div>
                             </div>
                         </div>
@@ -177,36 +201,38 @@ export const OffersPage: React.FC = () => {
                 )}
             </div>
 
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-4">
+                    <button
+                        className="px-3 py-1 bg-slate-800 rounded disabled:opacity-50 text-white"
+                        disabled={page === 1}
+                        onClick={() => setPage(p => p - 1)}
+                    >
+                        Prev
+                    </button>
+                    <span className="text-muted text-sm">Page {page} of {totalPages}</span>
+                    <button
+                        className="px-3 py-1 bg-slate-800 rounded disabled:opacity-50 text-white"
+                        disabled={page === totalPages}
+                        onClick={() => setPage(p => p + 1)}
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+
             {/* FAB */}
-            <button className="fab-create" onClick={() => setIsModalOpen(true)}>
+            <button className="fab-create" onClick={() => setIsDrawerOpen(true)}>
                 <Plus size={28} />
             </button>
 
-            {/* Modal - Basic Implementation */}
-            {isModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-content glass-panel">
-                        <div className="modal-header">
-                            <h2>Create Offer</h2>
-                            <button className="modal-close" onClick={() => setIsModalOpen(false)}>
-                                <X size={24} />
-                            </button>
-                        </div>
-                        {/* Simplified Form */}
-                        <div>
-                            <label className="block mb-2 text-sm text-muted">Coupon Code</label>
-                            <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white mb-4" placeholder="e.g. SUMMER25" />
-
-                            <label className="block mb-2 text-sm text-muted">Description</label>
-                            <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white mb-4" placeholder="Discount details" />
-
-                            <button className="btn-primary btn-block" onClick={() => setIsModalOpen(false)}>
-                                Create Coupon
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Create Offer Drawer */}
+            <CreateOfferDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                onSuccess={loadData}
+            />
         </div>
     );
 };

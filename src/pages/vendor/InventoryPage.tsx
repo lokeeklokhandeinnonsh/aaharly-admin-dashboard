@@ -388,7 +388,7 @@ export const InventoryPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {MOCK_INVENTORY.map((item, index) => (
+                                    {MOCK_INVENTORY.map((item) => (
                                         <tr
                                             key={item.id}
                                             style={styles.row(hoveredRow === item.id)}

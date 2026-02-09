@@ -1,82 +1,95 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Search,
     Filter,
     Plus,
     Download,
-    MoreVertical,
     MapPin,
     Users,
     Star,
     ChevronLeft,
     ChevronRight,
-    X,
     Store,
-    Phone,
-    Mail,
-    CheckCircle,
-    Clock
+    Edit,
+    Trash2
 } from 'lucide-react';
 import './Vendors.css';
-
-// --- Mock Data Generator ---
-// Helper to generate random vendors
-const LOCATIONS = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad', 'Chennai'];
-const STATUSES = ['active', 'active', 'active', 'onboarding', 'suspended'] as const;
-
-interface Vendor {
-    id: string;
-    businessName: string;
-    contactPerson: string;
-    email: string;
-    phone: string;
-    location: string;
-    rating: number;
-    activeSubscribers: number;
-    status: 'active' | 'onboarding' | 'suspended';
-    joinedDate: string;
-    dailyCapacity: number;
-}
-
-const generateVendors = (count: number): Vendor[] => {
-    return Array.from({ length: count }).map((_, i) => {
-        const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
-        const status = STATUSES[Math.floor(Math.random() * STATUSES.length)];
-
-        return {
-            id: `v-${1000 + i}`,
-            businessName: `Aaharly Kitchen ${location} #${i + 1}`,
-            contactPerson: `Manager ${i + 1}`,
-            email: `kitchen.${1000 + i}@aaharly.com`,
-            phone: `+91 98${Math.floor(10000000 + Math.random() * 90000000)}`,
-            location: location,
-            rating: Number((3.5 + Math.random() * 1.5).toFixed(1)),
-            activeSubscribers: Math.floor(50 + Math.random() * 450),
-            status: status,
-            joinedDate: new Date(2025, Math.floor(Math.random() * 11), Math.floor(Math.random() * 28) + 1).toLocaleDateString(),
-            dailyCapacity: Math.floor(200 + Math.random() * 800)
-        };
-    });
-};
-
-const MOCK_VENDORS = generateVendors(55); // Generating 55 vendors as requested
+import { adminClient, type Vendor } from '../api/adminClient';
+import toast, { Toaster } from 'react-hot-toast';
+import { CreateVendorModal } from '../components/CreateVendorModal';
+import { EditVendorDrawer } from '../components/EditVendorDrawer';
+import { VendorDetailsDrawer } from '../components/vendor/VendorDetailsDrawer';
 
 export const VendorsPage: React.FC = () => {
+    const [vendors, setVendors] = useState<Vendor[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
     const itemsPerPage = 12;
+
+    // Fetch vendors on mount
+    useEffect(() => {
+        fetchVendors();
+    }, []);
+
+    const fetchVendors = async () => {
+        setIsLoading(true);
+        try {
+            const data = await adminClient.getVendors();
+            setVendors(data);
+        } catch (error) {
+            console.error('Failed to fetch vendors:', error);
+            toast.error('Failed to load vendors');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) return;
+
+        try {
+            await adminClient.deleteVendor(id);
+            toast.success('Vendor deleted');
+            fetchVendors();
+        } catch (error) {
+            toast.error('Failed to delete vendor');
+        }
+    };
+
+    const handleStatusToggle = async (vendor: Vendor, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newStatus = vendor.status === 'active' ? 'inactive' : 'active';
+        try {
+            await adminClient.updateVendorStatus(vendor.id, newStatus);
+            toast.success(`Vendor ${newStatus}`);
+            fetchVendors(); // Refresh to update UI
+        } catch (error) {
+            toast.error('Failed to update status');
+        }
+    };
+
+    const openEdit = (vendor: Vendor, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingVendor(vendor);
+        setIsEditModalOpen(true);
+    };
 
     // Filter Logic
     const filteredVendors = useMemo(() => {
-        if (!searchTerm) return MOCK_VENDORS;
+        if (!searchTerm) return vendors;
         const lower = searchTerm.toLowerCase();
-        return MOCK_VENDORS.filter(v =>
-            v.businessName.toLowerCase().includes(lower) ||
-            v.location.toLowerCase().includes(lower) ||
-            v.contactPerson.toLowerCase().includes(lower)
+        return vendors.filter(v =>
+            v.name.toLowerCase().includes(lower) ||
+            (v.address && v.address.toLowerCase().includes(lower)) ||
+            (v.contact && v.contact.toLowerCase().includes(lower))
         );
-    }, [searchTerm]);
+    }, [vendors, searchTerm]);
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredVendors.length / itemsPerPage);
@@ -87,13 +100,15 @@ export const VendorsPage: React.FC = () => {
 
     return (
         <div className="vendors-page">
+            <Toaster position="top-right" />
+
             {/* Page Header Actions */}
             <div className="page-actions-bar glass-panel">
                 <div className="search-input-wrapper">
                     <Search className="search-icon" size={18} />
                     <input
                         type="text"
-                        placeholder="Search vendors by name, city or contact..."
+                        placeholder="Search vendors by name, address or contact..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -113,7 +128,10 @@ export const VendorsPage: React.FC = () => {
                     <button className="btn-secondary">
                         <Download size={16} /> Export
                     </button>
-                    <button className="btn-primary">
+                    <button
+                        className="btn-primary"
+                        onClick={() => setIsCreateModalOpen(true)}
+                    >
                         <Plus size={16} /> New Vendor
                     </button>
                 </div>
@@ -121,45 +139,77 @@ export const VendorsPage: React.FC = () => {
 
             {/* Vendors Grid */}
             <div className="vendors-grid">
-                {displayedVendors.map(vendor => (
-                    <div
-                        key={vendor.id}
-                        className="vendor-card card"
-                        onClick={() => setSelectedVendor(vendor)}
-                    >
-                        <div className="vendor-main-info">
-                            <div className="vendor-avatar-lg">
-                                <Store size={24} />
-                            </div>
-                            <div className="vendor-text">
-                                <h3>{vendor.businessName}</h3>
-                                <div className="vendor-meta">
-                                    <MapPin size={12} />
-                                    <span>{vendor.location}</span>
+                {isLoading ? (
+                    // Loading Skeletons
+                    Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="vendor-card card skeleton-card">
+                            <div className="skeleton-circle" style={{ width: '48px', height: '48px', marginBottom: '1rem' }}></div>
+                            <div className="skeleton-line" style={{ width: '80%', height: '20px', marginBottom: '0.5rem' }}></div>
+                            <div className="skeleton-line" style={{ width: '60%', height: '16px' }}></div>
+                        </div>
+                    ))
+                ) : displayedVendors.length > 0 ? (
+                    displayedVendors.map(vendor => (
+                        <div
+                            key={vendor.id}
+                            className="vendor-card card"
+                            onClick={() => setSelectedVendor(vendor)}
+                        >
+                            <div className="vendor-main-info">
+                                <div className="vendor-avatar-lg">
+                                    <Store size={24} />
+                                </div>
+                                <div className="vendor-text">
+                                    <h3>{vendor.name}</h3>
+                                    <div className="vendor-meta">
+                                        <MapPin size={12} />
+                                        <span>{vendor.address || 'No address'}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="vendor-stats">
-                            <div className="stat-item highlight">
-                                <Users size={14} />
-                                <span>{vendor.activeSubscribers} Subs</span>
+                            <div className="vendor-stats">
+                                <div className="stat-item highlight">
+                                    <Users size={14} />
+                                    <span>{vendor.activeSubscribers} Subs</span>
+                                </div>
+                                <div className="stat-item">
+                                    <Star size={14} fill={vendor.rating >= 4.5 ? "orange" : "none"} color="orange" />
+                                    <span>{vendor.rating.toFixed(1)}</span>
+                                </div>
                             </div>
-                            <div className="stat-item">
-                                <Star size={14} fill={vendor.rating >= 4.5 ? "orange" : "none"} color="orange" />
-                                <span>{vendor.rating}</span>
+
+                            <div
+                                className={`status-badge status-${vendor.status} cursor-pointer hover:opacity-80`}
+                                onClick={(e) => handleStatusToggle(vendor, e)}
+                                title="Click to toggle status"
+                            >
+                                {vendor.status}
+                            </div>
+
+                            <div className="vendor-actions-pill">
+                                <button className="action-btn-icon edit"
+                                    onClick={(e) => openEdit(vendor, e)}
+                                    title="Edit Vendor"
+                                >
+                                    <Edit size={16} />
+                                </button>
+                                <button className="action-btn-icon delete"
+                                    onClick={(e) => handleDelete(vendor.id, e)}
+                                    title="Delete Vendor"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
                         </div>
-
-                        <div className={`status-badge status-${vendor.status}`}>
-                            {vendor.status}
-                        </div>
-
-                        <button className="action-menu-btn" onClick={(e) => { e.stopPropagation(); }}>
-                            <MoreVertical size={18} />
-                        </button>
+                    ))
+                ) : (
+                    <div className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem' }}>
+                        <Store size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                        <h3>No vendors found</h3>
+                        <p>Try adjusting your search or add a new vendor.</p>
                     </div>
-                ))}
+                )}
             </div>
 
             {/* Pagination Controls */}
@@ -194,93 +244,30 @@ export const VendorsPage: React.FC = () => {
             )}
 
             {/* Vendor Details Drawer */}
-            {selectedVendor && (
-                <>
-                    <div className="drawer-overlay" onClick={() => setSelectedVendor(null)} />
-                    <div className="drawer glass-panel">
-                        <div className="drawer-header">
-                            <h2>Vendor Profile</h2>
-                            <button className="close-btn" onClick={() => setSelectedVendor(null)}>
-                                <X size={24} />
-                            </button>
-                        </div>
+            <VendorDetailsDrawer
+                vendor={selectedVendor}
+                isOpen={!!selectedVendor}
+                onClose={() => setSelectedVendor(null)}
+            />
 
-                        <div className="drawer-content">
-                            <div className="vendor-profile-hero">
-                                <div className="avatar-xl mb-4">
-                                    <Store size={32} />
-                                </div>
-                                <h2 className="text-xl font-bold">{selectedVendor.businessName}</h2>
-                                <span className="text-muted text-sm">{selectedVendor.location}</span>
-                                <div className={`status-badge status-${selectedVendor.status} mt-3`}>
-                                    {selectedVendor.status.toUpperCase()}
-                                </div>
-                            </div>
+            {/* Create Vendor Modal */}
+            <CreateVendorModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onVendorCreated={() => {
+                    fetchVendors(); // Refresh vendor list
+                }}
+            />
 
-                            <div className="drawer-section">
-                                <h4>Performance</h4>
-                                <div className="stats-grid">
-                                    <div className="stat-box">
-                                        <span className="label">Active Subs</span>
-                                        <span className="value">{selectedVendor.activeSubscribers}</span>
-                                    </div>
-                                    <div className="stat-box">
-                                        <span className="label">Daily Cap</span>
-                                        <span className="value">{selectedVendor.dailyCapacity}</span>
-                                    </div>
-                                    <div className="stat-box">
-                                        <span className="label">Rating</span>
-                                        <span className="value flex items-center justify-center gap-1">
-                                            {selectedVendor.rating} <Star size={14} fill="orange" color="orange" />
-                                        </span>
-                                    </div>
-                                    <div className="stat-box">
-                                        <span className="label">Completion</span>
-                                        <span className="value">98.5%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="drawer-section">
-                                <h4>Contact Details</h4>
-                                <div className="info-grid card p-4">
-                                    <div className="info-row">
-                                        <label><Users size={14} /> Contact</label>
-                                        <span>{selectedVendor.contactPerson}</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <label><Mail size={14} /> Email</label>
-                                        <span>{selectedVendor.email}</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <label><Phone size={14} /> Phone</label>
-                                        <span>{selectedVendor.phone}</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <label><Clock size={14} /> Joined</label>
-                                        <span>{selectedVendor.joinedDate}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="drawer-section">
-                                <h4>Compliance</h4>
-                                <div className="info-grid">
-                                    <div className="info-row">
-                                        <label>FSSAI License</label>
-                                        <span className="text-green-400 flex items-center gap-2"><CheckCircle size={14} /> Verified</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <label>Kitchen Hygiene</label>
-                                        <span className="text-green-400 flex items-center gap-2"><CheckCircle size={14} /> Pass</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </>
-            )}
+            {/* Edit Vendor Drawer */}
+            <EditVendorDrawer
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                vendor={editingVendor}
+                onVendorUpdated={() => {
+                    fetchVendors();
+                }}
+            />
         </div>
     );
 };

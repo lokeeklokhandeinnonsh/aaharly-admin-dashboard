@@ -23,12 +23,6 @@ export const VendorCustomerRow: React.FC<VendorCustomerRowProps> = ({
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short', day: 'numeric', year: 'numeric'
-        });
-    };
-
     // Columns Configuration based on screen size
     let gridTemplate = '2fr 1.2fr 1.5fr 1fr 1.2fr 0.8fr 1fr 1fr 0.6fr'; // Desktop
     if (isLaptop) gridTemplate = '2fr 1.5fr 1fr 1fr 1fr 0.6fr'; // Laptop (hide contact, location, joined)
@@ -151,7 +145,7 @@ export const VendorCustomerRow: React.FC<VendorCustomerRowProps> = ({
         actionBtn: {
             width: '32px',
             height: '32px',
-            display: 'flex', // Corrected flex property syntax
+            display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: '8px',
@@ -163,6 +157,18 @@ export const VendorCustomerRow: React.FC<VendorCustomerRowProps> = ({
         }
     };
 
+    // Derived Data
+    // Find next delivery to show accurate address
+    const nextDelivery = customer.deliveries && customer.deliveries.length > 0
+        ? customer.deliveries[0]
+        : null;
+
+    // Fallback to default address if no delivery
+    const defaultAddress = customer.addresses?.find(a => a.isDefault) || customer.addresses?.[0];
+
+    const displayAddress = nextDelivery?.address || defaultAddress;
+    const activeSub = customer.subscriptions?.find(s => s.status === 'active') || customer.subscriptions?.[0];
+
     return (
         <div
             style={styles.row}
@@ -173,10 +179,10 @@ export const VendorCustomerRow: React.FC<VendorCustomerRowProps> = ({
             {/* Customer Name + Email */}
             <div style={styles.colCustomer}>
                 <div style={styles.avatar}>
-                    {getInitials(customer.name)}
+                    {getInitials(customer.name || '')}
                 </div>
                 <div style={styles.customerInfo}>
-                    <span style={styles.name}>{customer.name}</span>
+                    <span style={styles.name}>{customer.name || 'Unknown'}</span>
                     <span style={styles.email}>{customer.email}</span>
                 </div>
             </div>
@@ -186,7 +192,7 @@ export const VendorCustomerRow: React.FC<VendorCustomerRowProps> = ({
                 <div>
                     <div style={styles.contactBadge}>
                         <Phone size={12} />
-                        <span>{customer.phone}</span>
+                        <span>{customer.mobile || 'N/A'}</span>
                     </div>
                 </div>
             )}
@@ -197,10 +203,12 @@ export const VendorCustomerRow: React.FC<VendorCustomerRowProps> = ({
                     <div style={styles.locationStack}>
                         <div style={styles.addressLine}>
                             <MapPin size={12} color="#94a3b8" />
-                            <span style={styles.pincode}>{customer.pincode}</span>
+                            <span style={styles.pincode}>{displayAddress?.pincode || 'N/A'}</span>
                         </div>
-                        <span style={styles.addressText} title={customer.address}>
-                            {customer.address.length > 20 ? customer.address.substring(0, 20) + '...' : customer.address}
+                        <span style={styles.addressText} title={displayAddress?.address || ''}>
+                            {displayAddress?.address && displayAddress.address.length > 20
+                                ? displayAddress.address.substring(0, 20) + '...'
+                                : (displayAddress?.address || 'No address')}
                         </span>
                     </div>
                 </div>
@@ -208,30 +216,35 @@ export const VendorCustomerRow: React.FC<VendorCustomerRowProps> = ({
 
             {/* Meal Category */}
             <div>
-                <span style={styles.categoryPill}>{customer.subscription.category}</span>
+                <span style={styles.categoryPill}>{nextDelivery?.category || 'N/A'}</span>
             </div>
 
             {/* Plan */}
             <div>
-                <span style={styles.planText}>{customer.subscription.planName}</span>
+                <span style={styles.planText}>{activeSub?.planName || 'No Plan'}</span>
             </div>
 
             {/* Meals/Day */}
             {!isMobile && (
                 <div>
-                    <span style={styles.mealsBadge}>{customer.mealPlan.mealsPerDay} Meals</span>
+                    {/* Approximation if not available in flat object */}
+                    <span style={styles.mealsBadge}>-</span>
                 </div>
             )}
 
             {/* Status */}
             <div>
-                <CustomerStatusBadge status={customer.subscription.status} />
+                {activeSub ? (
+                    <CustomerStatusBadge status={activeSub.status as 'active' | 'paused' | 'expired'} />
+                ) : (
+                    <span style={{ fontSize: '0.8rem', color: '#94a3b8', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>No Plan</span>
+                )}
             </div>
 
             {/* Joined - Hide on Laptop/Mobile */}
             {!isLaptop && !isMobile && (
                 <div>
-                    <span style={styles.joinedDate}>{formatDate(customer.createdAt)}</span>
+                    <span style={styles.joinedDate}>-</span>
                 </div>
             )}
 

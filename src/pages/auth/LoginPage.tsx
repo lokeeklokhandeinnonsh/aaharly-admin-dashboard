@@ -42,11 +42,18 @@ export const LoginPage: React.FC = () => {
             if (success) {
                 navigate('/');
             } else {
+                // If success is false but no error thrown (e.g. mock login fail or generic false)
                 setError('Invalid credentials.');
                 setIsLoading(false);
             }
-        } catch (err) {
-            setError('Login failed. Please try again.');
+        } catch (err: any) {
+            console.log('Login error caught:', err);
+            // Check for specific "inactive" message from backend
+            if (err.message && err.message.toLowerCase().includes('inactive')) {
+                setError('Your account is inactive. Contact admin.');
+            } else {
+                setError(err.message || 'Login failed. Please try again.');
+            }
             setIsLoading(false);
         }
     };

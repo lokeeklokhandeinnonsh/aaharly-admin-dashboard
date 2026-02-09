@@ -20,12 +20,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// MOCK CREDENTIALS
-const CREDENTIALS = {
-    'admin@aaharly.com': { role: 'SUPER_ADMIN', pass: 'admin123', name: 'Super Admin', avatar: 'SA' },
-    'vendor@aaharly.com': { role: 'VENDOR_ADMIN', pass: 'vendor123', name: 'Vendor Manager', avatar: 'VM' },
-    'staff@aaharly.com': { role: 'VENDOR_STAFF', pass: 'staff123', name: 'Staff User', avatar: 'ST' },
-};
+
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -58,8 +53,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 localStorage.setItem('vendor_token', response.accessToken);
                 return true;
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Vendor login failed:', err);
+            throw err; // Rethrow to allow component to handle specific errors (e.g. inactive)
         }
 
         return false;

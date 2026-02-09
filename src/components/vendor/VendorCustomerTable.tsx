@@ -137,9 +137,9 @@ export const VendorCustomerTable: React.FC<VendorCustomerTableProps> = ({ custom
 
             {/* Table Body */}
             <div style={styles.list}>
-                {customers.map((customer) => (
+                {customers.map((customer, index) => (
                     <VendorCustomerRow
-                        key={customer.userId}
+                        key={customer.id || `customer-${index}`}
                         customer={customer}
                         onClick={onViewCustomer}
                         isLaptop={isLaptop}

@@ -7,6 +7,7 @@ import { UsersPage } from './pages/UsersPage';
 import { SubscriptionsPage } from './pages/SubscriptionsPage';
 import { NutritionCategoriesPage } from './pages/NutritionCategoriesPage';
 import { OffersPage } from './pages/OffersPage';
+import { OrdersPage } from './pages/OrdersPage';
 import { ProductionDashboard } from './pages/vendor/ProductionDashboard';
 import { ReportsPage } from './pages/ReportsPage';
 import { MealsPage } from './pages/MealsPage';
@@ -38,45 +39,50 @@ const RootRedirector = () => {
   return <DashboardHome />;
 };
 
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
 
-          <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-            <Route index element={<RootRedirector />} />
+            <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+              <Route index element={<RootRedirector />} />
 
-            {/* Management */}
-            <Route path="users" element={<UsersPage />} />
-            <Route path="admins" element={<UsersPage />} />
-            <Route path="vendors" element={<VendorsPage />} />
+              {/* Management */}
+              <Route path="users" element={<UsersPage />} />
+              <Route path="admins" element={<UsersPage />} />
+              <Route path="vendors" element={<VendorsPage />} />
 
-            {/* Content */}
-            <Route path="categories" element={<NutritionCategoriesPage />} />
-            <Route path="offers" element={<OffersPage />} />
-            <Route path="meals" element={<MealsPage />} />
+              {/* Content */}
+              <Route path="categories" element={<NutritionCategoriesPage />} />
+              <Route path="offers" element={<OffersPage />} />
+              <Route path="orders" element={<OrdersPage />} />
+              <Route path="meals" element={<MealsPage />} />
 
-            {/* Subscriptions */}
-            <Route path="subscriptions" element={<SubscriptionsPage />} />
+              {/* Subscriptions */}
+              <Route path="subscriptions" element={<SubscriptionsPage />} />
 
-            {/* Vendor Routes */}
-            <Route path="vendor/customers" element={<CustomersPage />} />
-            <Route path="vendor/production" element={<ProductionDashboard />} />
-            <Route path="vendor/kitchen" element={<KitchenPrepPage />} />
-            <Route path="vendor/dispatch" element={<DispatchCenter />} />
-            <Route path="vendor/inventory" element={<InventoryPage />} />
+              {/* Vendor Routes */}
+              <Route path="vendor/customers" element={<CustomersPage />} />
+              <Route path="vendor/production" element={<ProductionDashboard />} />
+              <Route path="vendor/kitchen" element={<KitchenPrepPage />} />
+              <Route path="vendor/dispatch" element={<DispatchCenter />} />
+              <Route path="vendor/inventory" element={<InventoryPage />} />
 
-            {/* System */}
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="settings" element={<div className="p-8">Settings Placeholder (Admins Only)</div>} />
+              {/* System */}
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="settings" element={<div className="p-8">Settings Placeholder (Admins Only)</div>} />
 
-            {/* Fallback routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+              {/* Fallback routes */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ErrorBoundary>
     </AuthProvider>
   );
 }

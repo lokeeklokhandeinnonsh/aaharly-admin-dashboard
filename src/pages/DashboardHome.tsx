@@ -6,7 +6,9 @@ import {
     DollarSign,
     TrendingUp,
     ArrowUpRight,
-    ArrowDownRight
+    ArrowDownRight,
+    RefreshCw,
+    AlertCircle
 } from 'lucide-react';
 import {
     AreaChart,
@@ -19,25 +21,11 @@ import {
     BarChart,
     Bar
 } from 'recharts';
+import { dashboardClient } from '../api/dashboardClient';
+import type { DashboardStats, OrdersTrendItem, MealPopularityItem, RecentActivityItem } from '../api/dashboardClient';
+import toast from 'react-hot-toast';
 
-const DATA_ORDERS = [
-    { name: 'Mon', orders: 40 },
-    { name: 'Tue', orders: 65 },
-    { name: 'Wed', orders: 50 },
-    { name: 'Thu', orders: 85 },
-    { name: 'Fri', orders: 120 },
-    { name: 'Sat', orders: 90 },
-    { name: 'Sun', orders: 55 },
-];
-
-const DATA_MEALS = [
-    { name: 'Vegan', value: 400 },
-    { name: 'Keto', value: 300 },
-    { name: 'Paleo', value: 200 },
-    { name: 'Classic', value: 278 },
-];
-
-const KPICard = ({ title, value, change, icon: Icon, isPositive }: any) => {
+const KPICard = ({ title, value, change, icon: Icon, isPositive, isLoading }: any) => {
     const [isHovered, setIsHovered] = useState(false);
 
     const styles = {
@@ -87,6 +75,14 @@ const KPICard = ({ title, value, change, icon: Icon, isPositive }: any) => {
         }
     };
 
+    if (isLoading) {
+        return (
+            <div className="glass-panel" style={{ ...styles.card, height: '140px', justifyContent: 'center', alignItems: 'center' }}>
+                <span className="animate-pulse">Loading...</span>
+            </div>
+        );
+    }
+
     return (
         <div
             className="glass-panel"
@@ -100,10 +96,12 @@ const KPICard = ({ title, value, change, icon: Icon, isPositive }: any) => {
             <div style={styles.content}>
                 <span style={styles.title}>{title}</span>
                 <h3 style={styles.value}>{value}</h3>
-                <div style={styles.change}>
-                    {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                    <span>{change}</span>
-                </div>
+                {change && (
+                    <div style={styles.change}>
+                        {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                        <span>{change}</span>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -113,10 +111,56 @@ export const DashboardHome: React.FC = () => {
     const [width, setWidth] = useState(window.innerWidth);
     const [hoveredActivity, setHoveredActivity] = useState<number | null>(null);
 
+    // Data State
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [ordersTrend, setOrdersTrend] = useState<OrdersTrendItem[]>([]);
+    const [mealPopularity, setMealPopularity] = useState<MealPopularityItem[]>([]);
+    const [activities, setActivities] = useState<RecentActivityItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+    const fetchData = async () => {
+        try {
+            setError(null);
+            // Don't set isLoading(true) for background refreshes unless initial load
+            if (!stats) setIsLoading(true);
+
+            const [statsData, trendData, mealsData, activityData] = await Promise.all([
+                dashboardClient.getStats(),
+                dashboardClient.getOrdersTrend(),
+                dashboardClient.getMealPopularity(),
+                dashboardClient.getRecentActivity()
+            ]);
+
+            setStats(statsData);
+            setOrdersTrend(trendData.trend);
+            setMealPopularity(mealsData.popularity);
+            setActivities(activityData.activities);
+            setLastUpdated(new Date());
+        } catch (err: any) {
+            console.error('Failed to fetch dashboard data:', err);
+            setError('Failed to load dashboard data');
+            if (!stats) toast.error('Could not load dashboard metrics');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
         const handleResize = () => setWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+
+        // Initial Fetch
+        fetchData();
+
+        // Auto Refresh every 60s
+        const intervalId = setInterval(fetchData, 60000);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            clearInterval(intervalId);
+        };
     }, []);
 
     const isLaptop = width <= 1024;
@@ -126,6 +170,23 @@ export const DashboardHome: React.FC = () => {
             display: 'flex',
             flexDirection: 'column' as const,
             gap: '2rem',
+        },
+        header: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+        },
+        refreshBtn: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            color: 'var(--color-text-primary)',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
         },
         kpiGrid: {
             display: 'grid',
@@ -154,12 +215,6 @@ export const DashboardHome: React.FC = () => {
             color: 'var(--color-text-primary)',
             margin: 0,
         },
-        btnIcon: {
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--color-text-muted)',
-            cursor: 'pointer',
-        },
         recentActivity: {
             padding: '1.5rem',
             borderRadius: 'var(--radius-lg)',
@@ -169,14 +224,6 @@ export const DashboardHome: React.FC = () => {
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '1rem',
-        },
-        btnText: {
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--color-accent)',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: 500,
         },
         activityList: {
             display: 'flex',
@@ -206,6 +253,7 @@ export const DashboardHome: React.FC = () => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column' as const,
+            gap: '0.25rem',
         },
         activityTitle: {
             fontSize: '0.9rem',
@@ -216,43 +264,91 @@ export const DashboardHome: React.FC = () => {
             fontSize: '0.75rem',
             color: 'var(--color-text-muted)',
         },
-        activityAmount: {
-            fontWeight: 600,
-            color: 'var(--color-success)',
-        }
+        activityStatus: (status?: string) => ({
+            fontSize: '0.75rem',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            background: 'rgba(255,255,255,0.1)',
+            color: status === 'Active' ? 'var(--color-success)' : 'var(--color-text-primary)'
+        })
+    };
+
+    // Formatting helpers
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            maximumFractionDigits: 0
+        }).format(amount);
+    };
+
+    const formatDate = (dateString: string | Date) => {
+        const d = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000);
+
+        if (diffInSeconds < 60) return 'Just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} mins ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        return d.toLocaleDateString();
     };
 
     return (
         <div style={styles.home}>
+            {/* Header with Refresh */}
+            <div style={styles.header}>
+                <h2 style={{ margin: 0 }}>Dashboard Overview</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                        Last updated: {lastUpdated.toLocaleTimeString()}
+                    </span>
+                    <button
+                        style={styles.refreshBtn}
+                        onClick={() => fetchData()}
+                        disabled={isLoading}
+                    >
+                        <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            {error && (
+                <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', color: '#fca5a5', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <AlertCircle size={20} />
+                    {error}
+                </div>
+            )}
+
             {/* KPI Grid */}
             <div style={styles.kpiGrid}>
                 <KPICard
                     title="Total Users"
-                    value="12,543"
-                    change="+12% from last month"
+                    value={isLoading ? '-' : stats?.totalUsers}
                     icon={Users}
                     isPositive={true}
+                    isLoading={isLoading && !stats}
                 />
                 <KPICard
                     title="Active Subs"
-                    value="3,210"
-                    change="+5% from last month"
+                    value={isLoading ? '-' : stats?.activeSubscriptions}
                     icon={CreditCard}
                     isPositive={true}
+                    isLoading={isLoading && !stats}
                 />
                 <KPICard
                     title="Orders Today"
-                    value="145"
-                    change="-2% from yesterday"
+                    value={isLoading ? '-' : stats?.ordersToday}
                     icon={ShoppingBag}
-                    isPositive={false}
+                    isPositive={false} // Neutral
+                    isLoading={isLoading && !stats}
                 />
                 <KPICard
-                    title="Total Revenue"
-                    value="₹45,200"
-                    change="+8.5% from last month"
+                    title="Revenue (Month)"
+                    value={isLoading ? '-' : formatCurrency(stats?.revenueThisMonth || 0)}
                     icon={DollarSign}
                     isPositive={true}
+                    isLoading={isLoading && !stats}
                 />
             </div>
 
@@ -260,12 +356,11 @@ export const DashboardHome: React.FC = () => {
             <div style={styles.chartsGrid}>
                 <div className="glass-panel" style={styles.chartCard}>
                     <div style={styles.chartHeader}>
-                        <h3 style={styles.chartTitle}>Orders Overview</h3>
-                        <button style={styles.btnIcon}><TrendingUp size={16} /></button>
+                        <h3 style={styles.chartTitle}>Orders Trend (Last 30 Days)</h3>
                     </div>
                     <div style={{ width: '100%', height: 300 }}>
                         <ResponsiveContainer>
-                            <AreaChart data={DATA_ORDERS}>
+                            <AreaChart data={ordersTrend}>
                                 <defs>
                                     <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#FF7A00" stopOpacity={0.3} />
@@ -273,13 +368,18 @@ export const DashboardHome: React.FC = () => {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#64748B" />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="#64748B"
+                                    tickFormatter={(val) => new Date(val).getDate().toString()} // Show only day number
+                                />
                                 <YAxis stroke="#64748B" />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#1E293B', border: 'none', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
+                                    labelFormatter={(val) => new Date(val).toLocaleDateString()}
                                 />
-                                <Area type="monotone" dataKey="orders" stroke="#FF7A00" fillOpacity={1} fill="url(#colorOrders)" />
+                                <Area type="monotone" dataKey="count" stroke="#FF7A00" fillOpacity={1} fill="url(#colorOrders)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -287,19 +387,25 @@ export const DashboardHome: React.FC = () => {
 
                 <div className="glass-panel" style={styles.chartCard}>
                     <div style={styles.chartHeader}>
-                        <h3 style={styles.chartTitle}>Meal Plan Popularity</h3>
+                        <h3 style={styles.chartTitle}>Top Meal Plans</h3>
                     </div>
                     <div style={{ width: '100%', height: 300 }}>
                         <ResponsiveContainer>
-                            <BarChart data={DATA_MEALS}>
+                            <BarChart data={mealPopularity} layout="vertical">
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#64748B" />
-                                <YAxis stroke="#64748B" />
+                                <XAxis type="number" stroke="#64748B" hide />
+                                <YAxis
+                                    dataKey="planName"
+                                    type="category"
+                                    width={100}
+                                    stroke="#64748B"
+                                    tick={{ fontSize: 12 }}
+                                />
                                 <Tooltip
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                     contentStyle={{ backgroundColor: '#1E293B', border: 'none', borderRadius: '8px' }}
                                 />
-                                <Bar dataKey="value" fill="#10B981" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="subscriptionCount" fill="#10B981" radius={[0, 4, 4, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -310,29 +416,41 @@ export const DashboardHome: React.FC = () => {
             <div className="glass-panel" style={styles.recentActivity}>
                 <div style={styles.sectionHeader}>
                     <h3 style={styles.chartTitle}>Recent Activity</h3>
-                    <button style={styles.btnText}>View All</button>
                 </div>
                 <div style={styles.activityList}>
-                    {[1, 2, 3, 4].map((i, idx) => (
-                        <div
-                            key={i}
-                            style={styles.activityItem(hoveredActivity === idx)}
-                            onMouseEnter={() => setHoveredActivity(idx)}
-                            onMouseLeave={() => setHoveredActivity(null)}
-                        >
-                            <div style={styles.activityIconBg}>
-                                <ShoppingBag size={18} />
+                    {isLoading && !activities.length ? (
+                        <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem' }}>Loading activities...</div>
+                    ) : activities.length === 0 ? (
+                        <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem' }}>No recent activity</div>
+                    ) : (
+                        activities.map((item, idx) => (
+                            <div
+                                key={idx}
+                                style={styles.activityItem(hoveredActivity === idx)}
+                                onMouseEnter={() => setHoveredActivity(idx)}
+                                onMouseLeave={() => setHoveredActivity(null)}
+                            >
+                                <div style={styles.activityIconBg}>
+                                    {item.type === 'USER' && <Users size={18} />}
+                                    {item.type === 'ORDER' && <ShoppingBag size={18} />}
+                                    {item.type === 'ALERT' && <AlertCircle size={18} />}
+                                    {/* Fallback */}
+                                    {!['USER', 'ORDER', 'ALERT'].includes(item.type) && <TrendingUp size={18} />}
+                                </div>
+                                <div style={styles.activityDetails}>
+                                    <span style={styles.activityTitle}>{item.message}</span>
+                                    <span style={styles.activityTime}>{formatDate(item.date)}</span>
+                                </div>
+                                {item.status && (
+                                    <div style={styles.activityStatus(item.status)}>
+                                        {item.status}
+                                    </div>
+                                )}
                             </div>
-                            <div style={styles.activityDetails}>
-                                <span style={styles.activityTitle}>New Order #223{i}</span>
-                                <span style={styles.activityTime}>{i * 15} mins ago</span>
-                            </div>
-                            <div style={styles.activityAmount}>+₹120.00</div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
         </div>
     );
 };
-

@@ -5,54 +5,44 @@ import {
     ChevronRight,
     TrendingUp,
     AlertTriangle,
-    Clock,
     Truck,
-    Package,
-    AlertOctagon
+    Package
 } from 'lucide-react';
-
-// --- MOCK DATA ---
-const KPI_DATA = {
-    planned: 450,
-    prepared: 312,
-    remaining: 138,
-    dispatchReady: 280,
-    delayed: 2
-};
-
-const MEAL_BREAKDOWN = [
-    { id: 101, name: 'Keto Chicken Salad', plan: 120, done: 120, rem: 0, status: 'Completed' },
-    { id: 102, name: 'Vegan Buddha Bowl', plan: 85, done: 60, rem: 25, status: 'In Progress' },
-    { id: 103, name: 'Grilled Fish & Veg', plan: 100, done: 90, rem: 10, status: 'In Progress' },
-    { id: 104, name: 'Protein Smoothie', plan: 145, done: 42, rem: 103, status: 'Derived' },
-];
-
-const PREP_STATUS = [
-    { id: 'B-001', meal: 'Vegan Buddha Bowl', staff: 'Sarah J.', start: '10:00 AM', status: 'Active', delay: null },
-    { id: 'B-002', meal: 'Grilled Fish', staff: 'Mike T.', start: '09:30 AM', status: 'Delayed', delay: 'Ingredient Shortage' },
-    { id: 'B-003', meal: 'Protein Smoothie', staff: 'Unassigned', start: '-', status: 'Pending', delay: null },
-];
-
-const INVENTORY_SNAPSHOT = [
-    { key: 'raw_chicken', name: 'Raw Chicken', open: '50kg', used: '35kg', rem: '15kg', status: 'ok', percent: 30 },
-    { key: 'kale', name: 'Fresh Kale', open: '20kg', used: '18kg', rem: '2kg', status: 'critical', percent: 10 },
-    { key: 'avocado', name: 'Avocados', open: '100u', used: '40u', rem: '60u', status: 'ok', percent: 60 },
-];
-
-const ALERTS = [
-    { id: 1, type: 'critical', msg: 'Kale stock critical (2kg left). Restock needed for dinner.', action: 'Request Stock' },
-    { id: 2, type: 'warn', msg: 'Batch B-002 is delayed by 20 mins.', action: 'View Batch' },
-];
+import { vendorClient } from '../../services/vendorClient';
+import type { DashboardSummary } from '../../services/vendorClient';
 
 export const ProductionDashboard: React.FC = () => {
     const [dateRange] = useState('Today, Jan 11');
     const [width, setWidth] = useState(window.innerWidth);
     const [hoveredKpi, setHoveredKpi] = useState<number | null>(null);
+    const [data, setData] = useState<DashboardSummary | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const handleResize = () => setWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const summary = await vendorClient.getDashboardSummary();
+            setData(summary);
+            setError(null);
+        } catch (err) {
+            console.error('Failed to fetch dashboard summary:', err);
+            setError('Failed to load dashboard data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        const interval = setInterval(fetchData, 60000); // 1 min poll
+        return () => clearInterval(interval);
     }, []);
 
     const isLaptop = width <= 1024;
@@ -135,7 +125,7 @@ export const ProductionDashboard: React.FC = () => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1.25rem',
         },
-        kpiCard: (color: string, index: number) => ({
+        kpiCard: (_color: string, index: number) => ({
             background: 'rgba(30, 41, 59, 0.6)',
             backdropFilter: 'blur(12px)',
             border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -365,6 +355,31 @@ export const ProductionDashboard: React.FC = () => {
             background: 'rgba(255,255,255,0.1)',
             borderRadius: '2px',
             margin: '0 0.5rem',
+        },
+        loadingState: {
+            display: 'flex',
+            justifyContent: 'center',
+            padding: '3rem',
+            color: 'rgba(255,255,255,0.5)'
+        }
+    };
+
+    if (loading) return <div style={styles.loadingState}>Loading dashboard...</div>;
+    if (error) return <div style={styles.loadingState}>{error}</div>;
+    if (!data) return <div style={styles.loadingState}>No data available</div>;
+
+    const { kpi, productionBreakdown, dispatchReadiness, inventorySnapshot } = data;
+    const completeness = Math.round((kpi.prepared / kpi.planned) * 100) || 0;
+
+    const handleGenerate = async () => {
+        try {
+            setLoading(true);
+            await vendorClient.generateDailyBatches();
+            await fetchData(); // Refresh data
+        } catch (err) {
+            console.error('Failed to generate batches:', err);
+            setError('Failed to generate batches');
+            setLoading(false);
         }
     };
 
@@ -383,12 +398,29 @@ export const ProductionDashboard: React.FC = () => {
                     <p style={styles.subtitle}>Today's Kitchen & Dispatch Overview</p>
                 </div>
                 <div style={styles.headerControls}>
+                    <button
+                        onClick={handleGenerate}
+                        style={{
+                            ...styles.btnIconGlass,
+                            width: 'auto',
+                            padding: '0 1rem',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem',
+                            borderRadius: '9999px',
+                            background: 'rgba(59, 130, 246, 0.2)',
+                            color: '#60A5FA',
+                            border: '1px solid rgba(59, 130, 246, 0.3)'
+                        }}
+                        title="Generate Today's Batches"
+                    >
+                        <RefreshCw size={16} /> Generate Batches
+                    </button>
                     <div style={styles.dateSelector}>
                         <Calendar size={16} />
                         <span>{dateRange}</span>
                         <ChevronRight size={14} />
                     </div>
-                    <button style={styles.btnIconGlass} title="Refresh Data">
+                    <button onClick={fetchData} style={styles.btnIconGlass} title="Refresh Data">
                         <RefreshCw size={18} />
                     </button>
                 </div>
@@ -397,11 +429,11 @@ export const ProductionDashboard: React.FC = () => {
             {/* 1. KPI Summary Row */}
             <div style={styles.kpiRow}>
                 {[
-                    { l: 'Meals Planned', v: KPI_DATA.planned, c: 'blue', h: null },
-                    { l: 'Meals Prepared', v: KPI_DATA.prepared, c: 'green', h: { t: 'good', i: <TrendingUp size={12} />, tx: '69% Complete' } },
-                    { l: 'Remaining', v: KPI_DATA.remaining, c: 'orange', h: { t: 'warn', i: null, tx: 'Target: 4:00 PM' } },
-                    { l: 'Ready for Dispatch', v: KPI_DATA.dispatchReady, c: 'purple', h: null },
-                    { l: 'Delayed Batches', v: KPI_DATA.delayed, c: 'red', h: { t: 'bad', i: <AlertTriangle size={12} />, tx: 'Action Needed' } }
+                    { l: 'Meals Planned', v: kpi.planned, c: 'blue', h: null },
+                    { l: 'Meals Prepared', v: kpi.prepared, c: 'green', h: { t: 'good', i: <TrendingUp size={12} />, tx: `${completeness}% Complete` } },
+                    { l: 'Remaining', v: kpi.remaining, c: 'orange', h: { t: 'warn', i: null, tx: 'Target: 4:00 PM' } },
+                    { l: 'Ready for Dispatch', v: kpi.dispatchReady, c: 'purple', h: null },
+                    { l: 'Delayed Batches', v: kpi.delayed, c: 'red', h: { t: 'bad', i: <AlertTriangle size={12} />, tx: 'Action Needed' } }
                 ].map((k, idx) => (
                     <div
                         key={idx}
@@ -428,9 +460,9 @@ export const ProductionDashboard: React.FC = () => {
                     <span style={styles.subtitle}>Cutoff: 5:00 PM</span>
                 </div>
                 <div style={styles.progressTrack}>
-                    <div style={styles.progressSegment('done', '40%', true, false)}></div>
-                    <div style={styles.progressSegment('prep', '29%', false, false)}></div>
-                    <div style={styles.progressSegment('bg', '31%', false, true)}></div>
+                    <div style={styles.progressSegment('done', `${completeness}%`, true, false)}></div>
+                    {/* Simplified progress bar for now */}
+                    <div style={styles.progressSegment('bg', `${100 - completeness}%`, false, true)}></div>
 
                     {[
                         { l: '20%', t: '10 AM' },
@@ -445,10 +477,7 @@ export const ProductionDashboard: React.FC = () => {
                 </div>
                 <div style={styles.legend}>
                     <div style={styles.legendItem}>
-                        <div style={{ width: 10, height: 10, background: '#10B981', borderRadius: 2 }}></div> Dispatched
-                    </div>
-                    <div style={styles.legendItem}>
-                        <div style={{ width: 10, height: 10, background: '#3B82F6', borderRadius: 2 }}></div> Prepared
+                        <div style={{ width: 10, height: 10, background: '#10B981', borderRadius: 2 }}></div> Completed
                     </div>
                     <div style={styles.legendItem}>
                         <div style={{ width: 10, height: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}></div> Remaining
@@ -477,12 +506,12 @@ export const ProductionDashboard: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {MEAL_BREAKDOWN.map(m => (
-                                        <tr key={m.id}>
-                                            <td style={styles.td}>{m.name}</td>
+                                    {productionBreakdown.map(m => (
+                                        <tr key={m.mealId}>
+                                            <td style={styles.td}>{m.mealName}</td>
                                             <td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold' }}>{m.plan}</td>
                                             <td style={{ ...styles.td, textAlign: 'center', color: '#10B981' }}>{m.done}</td>
-                                            <td style={{ ...styles.td, textAlign: 'center', color: m.rem > 0 ? '#F97316' : '#64748b' }}>{m.rem}</td>
+                                            <td style={{ ...styles.td, textAlign: 'center', color: m.remaining > 0 ? '#F97316' : '#64748b' }}>{m.remaining}</td>
                                             <td style={{ ...styles.td, textAlign: 'right' }}>
                                                 <span style={styles.chip(m.status)}>
                                                     {m.status}
@@ -495,79 +524,12 @@ export const ProductionDashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 4. Kitchen Prep Status */}
-                    <div style={styles.sectionPanel}>
-                        <div style={styles.panelHeader}>
-                            <h3 style={styles.panelTitle}>Active Batches & Prep</h3>
-                        </div>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th style={styles.th}>Batch ID</th>
-                                        <th style={styles.th}>Meal</th>
-                                        <th style={styles.th}>Staff</th>
-                                        <th style={styles.th}>Start Time</th>
-                                        <th style={styles.th}>Status</th>
-                                        <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {PREP_STATUS.map(batch => (
-                                        <tr key={batch.id}>
-                                            <td style={{ ...styles.td, fontFamily: 'monospace', color: '#94a3b8' }}>{batch.id}</td>
-                                            <td style={styles.td}>
-                                                {batch.meal}
-                                                {batch.delay && <div style={{ fontSize: '0.75rem', color: '#EF4444' }}>{batch.delay}</div>}
-                                            </td>
-                                            <td style={styles.td}>{batch.staff}</td>
-                                            <td style={styles.td}>{batch.start}</td>
-                                            <td style={styles.td}>
-                                                <span style={styles.chip(batch.status)}>
-                                                    {batch.status}
-                                                </span>
-                                            </td>
-                                            <td style={{ ...styles.td, textAlign: 'right' }}>
-                                                <button
-                                                    style={styles.btnSmAction}
-                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#FF7A18'; e.currentTarget.style.color = 'white'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#FF7A18'; }}
-                                                >
-                                                    Manage
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    {/* 4. Kitchen Prep Status - Placeholder for now as integration is on separate page */}
+                    {/* Could import the table from KitchenPrepPage if needed, or just link to it */}
                 </div>
 
                 {/* Right Column */}
                 <div style={styles.col}>
-                    {/* Alerts */}
-                    <div style={{ ...styles.sectionPanel, borderColor: 'rgba(239, 68, 68, 0.3)' }}>
-                        <div style={styles.panelHeader}>
-                            <h3 style={{ ...styles.panelTitle, color: '#EF4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <AlertOctagon size={18} /> Action Required
-                            </h3>
-                        </div>
-                        <div style={styles.alertList}>
-                            {ALERTS.map(alert => (
-                                <div key={alert.id} style={styles.alertItem(alert.type)}>
-                                    <div style={{ paddingTop: '2px' }}>
-                                        {alert.type === 'critical' ? <AlertTriangle size={16} color="#EF4444" /> : <Clock size={16} color="#F59E0B" />}
-                                    </div>
-                                    <div>
-                                        <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.9)' }}>{alert.msg}</p>
-                                        <span style={styles.alertAction(alert.type)}>{alert.action} &rarr;</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
                     {/* Dispatch Readiness */}
                     <div style={styles.sectionPanel}>
                         <div style={styles.panelHeader}>
@@ -576,17 +538,19 @@ export const ProductionDashboard: React.FC = () => {
                         </div>
                         <div style={styles.dispatchGrid}>
                             <div style={styles.dispatchItem}>
-                                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#10B981' }}>12</span>
+                                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#10B981' }}>{dispatchReadiness.ready}</span>
                                 <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Ready</span>
                             </div>
                             <div style={styles.dispatchItem}>
-                                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#F59E0B' }}>5</span>
+                                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#F59E0B' }}>{dispatchReadiness.pending}</span>
                                 <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Pending Prep</span>
                             </div>
                         </div>
-                        <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.1)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.85rem', color: '#FCA5A5' }}>
-                            <span style={{ fontWeight: 'bold' }}>Warning:</span> 5 orders pending for 1:00 PM slot.
-                        </div>
+                        {dispatchReadiness.alertMessage && (
+                            <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.1)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.85rem', color: '#FCA5A5' }}>
+                                <span style={{ fontWeight: 'bold' }}>Warning:</span> {dispatchReadiness.alertMessage}
+                            </div>
+                        )}
                     </div>
 
                     {/* Inventory Snapshot */}
@@ -596,12 +560,12 @@ export const ProductionDashboard: React.FC = () => {
                             <Package size={18} className="text-muted" style={{ color: 'rgba(255,255,255,0.6)' }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {INVENTORY_SNAPSHOT.map(inv => (
+                            {inventorySnapshot.map(inv => (
                                 <div key={inv.key} style={styles.invItem}>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>{inv.name}</div>
                                         <span style={{ fontSize: '0.75rem', color: inv.status === 'critical' ? '#EF4444' : '#64748b' }}>
-                                            {inv.rem} Remaining
+                                            {inv.remaining} Remaining
                                         </span>
                                     </div>
                                     <div style={styles.barBg}>
@@ -626,4 +590,5 @@ export const ProductionDashboard: React.FC = () => {
         </div>
     );
 };
+
 

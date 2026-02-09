@@ -3,18 +3,19 @@ import {
     Truck,
     MapPin,
     CheckCircle,
-    Phone
+    Phone,
+    RefreshCw
 } from 'lucide-react';
-
-const DELIVERY_TASKS = [
-    { id: 'ORD-1209', time: '12:30 PM', address: 'Plot 45, Indiranagar, BLR', status: 'ready', items: 3 },
-    { id: 'ORD-1215', time: '01:00 PM', address: 'Tech Park, Whitefield', status: 'pending', items: 5 },
-    { id: 'ORD-1233', time: '01:15 PM', address: 'Apartment 402, Koramangala', status: 'delayed', items: 2 },
-];
+import { vendorClient } from '../../services/vendorClient';
+import type { DispatchOrder } from '../../services/vendorClient';
 
 export const DispatchCenter: React.FC = () => {
     const [width, setWidth] = useState(window.innerWidth);
     const [hoveredTask, setHoveredTask] = useState<string | null>(null);
+    const [orders, setOrders] = useState<DispatchOrder[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    // const { token } = useAuth(); // Token handled by vendorClient directly via localStorage for now
 
     useEffect(() => {
         const handleResize = () => setWidth(window.innerWidth);
@@ -22,14 +23,51 @@ export const DispatchCenter: React.FC = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            const data = await vendorClient.getDispatchOrders();
+            setOrders(data);
+            setError(null);
+        } catch (err) {
+            console.error('Failed to fetch dispatch orders:', err);
+            setError('Failed to load orders');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchOrders();
+        const interval = setInterval(fetchOrders, 60000); // Poll every minute
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleStatusUpdate = async (orderId: string, status: 'READY_TO_DISPATCH' | 'HANDED_OVER') => {
+        try {
+            await vendorClient.updateDispatchStatus(orderId, status);
+            // Optimistic update
+            setOrders(prev => prev.map(o =>
+                o.orderId === orderId
+                    ? { ...o, status: status }
+                    : o
+            ));
+        } catch (err) {
+            console.error('Failed to update status:', err);
+            alert('Failed to update status');
+            fetchOrders(); // Revert on error
+        }
+    };
+
     const isMobile = width <= 768;
 
     // Helpers for styles
     const getStatusColors = (status: string) => {
         switch (status) {
-            case 'ready': return { border: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', text: '#34D399', badgeBorder: 'rgba(16, 185, 129, 0.2)' };
-            case 'delayed': return { border: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', text: '#F87171', badgeBorder: 'rgba(239, 68, 68, 0.2)' };
-            case 'pending': return { border: '#EAB308', bg: 'rgba(234, 179, 8, 0.1)', text: '#FBBF24', badgeBorder: 'rgba(234, 179, 8, 0.2)' };
+            case 'READY_TO_DISPATCH': return { border: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', text: '#34D399', badgeBorder: 'rgba(16, 185, 129, 0.2)' };
+            case 'HANDED_OVER': return { border: '#059669', bg: 'rgba(5, 150, 105, 0.1)', text: '#059669', badgeBorder: 'rgba(5, 150, 105, 0.2)' };
+            case 'DELIVERED': return { border: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', text: '#60A5FA', badgeBorder: 'rgba(59, 130, 246, 0.2)' };
+            case 'PENDING': return { border: '#EAB308', bg: 'rgba(234, 179, 8, 0.1)', text: '#FBBF24', badgeBorder: 'rgba(234, 179, 8, 0.2)' };
             default: return { border: '#9ca3af', bg: 'rgba(156, 163, 175, 0.1)', text: '#9ca3af', badgeBorder: 'rgba(156, 163, 175, 0.2)' };
         }
     };
@@ -114,7 +152,7 @@ export const DispatchCenter: React.FC = () => {
         },
         timeSlot: {
             textAlign: 'center' as const,
-            width: '80px',
+            minWidth: '100px',
         },
         time: {
             display: 'block',
@@ -141,10 +179,12 @@ export const DispatchCenter: React.FC = () => {
             width: '1px',
             height: '40px',
             background: 'rgba(255, 255, 255, 0.15)',
+            display: isMobile ? 'none' : 'block',
         },
         orderDetails: {
             display: 'flex',
             flexDirection: 'column' as const,
+            maxWidth: '400px',
         },
         orderTitle: {
             color: 'white',
@@ -214,8 +254,18 @@ export const DispatchCenter: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            textDecoration: 'none',
+        },
+        loadingState: {
+            display: 'flex',
+            justifyContent: 'center',
+            padding: '3rem',
+            color: 'rgba(255,255,255,0.5)'
         }
     };
+
+    const readyCount = orders.filter(o => o.status === 'READY_TO_DISPATCH').length;
+    const pendingCount = orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length;
 
     return (
         <div style={styles.container}>
@@ -230,84 +280,102 @@ export const DispatchCenter: React.FC = () => {
                     <h2 style={styles.title}>Dispatch Center</h2>
                     <p style={styles.subtitle}>Manage handovers and delivery partners.</p>
                 </div>
-                <div style={styles.statsContainer}>
-                    <div style={styles.statCard}>
-                        <span style={styles.statValue}>12</span>
-                        <span style={styles.statLabel}>Ready</span>
-                    </div>
-                    <div style={styles.statCard}>
-                        <span style={styles.statValue}>05</span>
-                        <span style={styles.statLabel}>Pending</span>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button onClick={fetchOrders} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                        <RefreshCw size={18} />
+                    </button>
+                    <div style={styles.statsContainer}>
+                        <div style={styles.statCard}>
+                            <span style={styles.statValue}>{readyCount}</span>
+                            <span style={styles.statLabel}>Ready</span>
+                        </div>
+                        <div style={styles.statCard}>
+                            <span style={styles.statValue}>{pendingCount}</span>
+                            <span style={styles.statLabel}>Pending</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Timeline View */}
             <div style={styles.timeline}>
-                {DELIVERY_TASKS.map(task => (
-                    <div
-                        key={task.id}
-                        style={styles.cardWrapper(task.id)}
-                        onMouseEnter={() => setHoveredTask(task.id)}
-                        onMouseLeave={() => setHoveredTask(null)}
-                    >
-                        <div style={styles.card(task.status, task.id)}>
-                            <div style={styles.cardLeft}>
-                                <div style={styles.timeSlot}>
-                                    <span style={styles.time}>{task.time}</span>
-                                    <span style={styles.statusLabel(task.status)}>
-                                        {task.status}
-                                    </span>
-                                </div>
+                {loading ? (
+                    <div style={styles.loadingState}>Loading dispatch orders...</div>
+                ) : error ? (
+                    <div style={styles.loadingState}>{error}</div>
+                ) : orders.length === 0 ? (
+                    <div style={styles.loadingState}>No orders for today.</div>
+                ) : (
+                    orders.map(task => (
+                        <div
+                            key={task.orderId}
+                            style={styles.cardWrapper(task.orderId)}
+                            onMouseEnter={() => setHoveredTask(task.orderId)}
+                            onMouseLeave={() => setHoveredTask(null)}
+                        >
+                            <div style={styles.card(task.status, task.orderId)}>
+                                <div style={styles.cardLeft}>
+                                    <div style={styles.timeSlot}>
+                                        <span style={styles.time}>{task.slot}</span>
+                                        <span style={styles.statusLabel(task.status)}>
+                                            {task.status.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
 
-                                <div style={styles.divider}></div>
+                                    <div style={styles.divider}></div>
 
-                                <div style={styles.orderDetails}>
-                                    <h4 style={styles.orderTitle}>
-                                        {task.id}
-                                        <span style={styles.mealCount}>({task.items} meals)</span>
-                                    </h4>
-                                    <div style={styles.address}>
-                                        <MapPin size={14} /> {task.address}
+                                    <div style={styles.orderDetails}>
+                                        <h4 style={styles.orderTitle}>
+                                            {task.customerName}
+                                            <span style={styles.mealCount}>({task.mealName})</span>
+                                        </h4>
+                                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                                            {task.planName} • {task.type}
+                                        </div>
+                                        <div style={styles.address}>
+                                            <MapPin size={14} /> {task.customerAddress} ({task.pincode})
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div style={styles.cardActions}>
-                                {task.status === 'ready' ? (
-                                    <button
-                                        style={styles.btnHandover}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#047857'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = '#059669'}
-                                    >
-                                        <CheckCircle size={16} /> Handover Complete
-                                    </button>
-                                ) : (
-                                    <button
-                                        style={styles.btnReady}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-                                    >
-                                        <Truck size={16} /> Mark Ready
-                                    </button>
-                                )}
-                                <button
-                                    style={styles.btnCall}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.color = 'white';
-                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.color = 'var(--color-text-muted, rgba(255,255,255,0.6))';
-                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                                    }}
-                                >
-                                    <Phone size={18} />
-                                </button>
+                                <div style={styles.cardActions}>
+                                    {task.status === 'READY_TO_DISPATCH' ? (
+                                        <button
+                                            style={styles.btnHandover}
+                                            onClick={() => handleStatusUpdate(task.orderId, 'HANDED_OVER')}
+                                        >
+                                            <CheckCircle size={16} /> Handover Complete
+                                        </button>
+                                    ) : task.status === 'HANDED_OVER' ? (
+                                        <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <CheckCircle size={16} /> Dispatched
+                                        </span>
+                                    ) : task.status === 'DELIVERED' ? (
+                                        <span style={{ color: '#3B82F6', fontWeight: 600, fontSize: '0.9rem' }}>
+                                            Delivered
+                                        </span>
+                                    ) : (
+                                        <button
+                                            style={styles.btnReady}
+                                            onClick={() => handleStatusUpdate(task.orderId, 'READY_TO_DISPATCH')}
+                                        >
+                                            <Truck size={16} /> Mark Ready
+                                        </button>
+                                    )}
+                                    {task.customerPhone && (
+                                        <a
+                                            href={`tel:${task.customerPhone}`}
+                                            style={styles.btnCall}
+                                            title="Call Customer"
+                                        >
+                                            <Phone size={18} />
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
         </div>
     );
