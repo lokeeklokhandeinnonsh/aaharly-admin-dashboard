@@ -4,25 +4,42 @@ import {
     Search,
     Calendar,
     List,
-    Utensils
+    Utensils,
 } from 'lucide-react';
-import { MealEditor } from '../components/MealEditor';
-import { MealRow } from '../components/MealRow';
-import toast, { Toaster } from 'react-hot-toast';
+import { MealDrawer } from '../components/meals/MealDrawer';
+import { MealPlanAccordion } from '../components/meals/MealPlanAccordion';
+import { useMealAccordion } from '../hooks/useMealAccordion';
+import { Toaster } from 'react-hot-toast';
 import mealScheduleData from '../data/meal_schedule.json';
-import { adminClient, type AdminMealPlanPayload, type Category, type Meal } from '../api/adminClient';
+import { adminClient } from '../api/adminClient';
 import { useAuth } from '../context/AuthContext';
 
 export const MealsPage: React.FC = () => {
     const { role } = useAuth();
     const isSuperAdmin = role === 'SUPER_ADMIN';
 
+    // New Hook Integration
+    const {
+        mealPlans,
+        expandedPlanId,
+        loadingPlanIds,
+        toggleAccordion,
+        deletePlan,
+        editPlan,
+        addPlan,
+        isDrawerOpen,
+        editingMeal,
+        openAddMealDrawer,
+        openEditMealDrawer,
+        closeDrawer,
+        saveMeal,
+        deleteMeal,
+        toggleMealActive,
+        isLoadingPlans
+    } = useMealAccordion();
+
     const [activeTab, setActiveTab] = useState<'library' | 'menu'>('library');
-    const [meals, setMeals] = useState<Meal[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isEditorOpen, setIsEditorOpen] = useState(false);
-    const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+    const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState('All');
     const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
@@ -37,166 +54,44 @@ export const MealsPage: React.FC = () => {
     const isLaptop = width <= 1024;
     const isMobile = width <= 768;
 
-    // Fetch Data
+    // Fetch Calendar Data (Only for Menu Tab)
     useEffect(() => {
-        if (activeTab === 'library') {
-            fetchMeals();
-        } else if (activeTab === 'menu') {
+        if (activeTab === 'menu') {
             fetchCalendar();
         }
     }, [activeTab]);
 
-    const fetchMeals = async () => {
-        setIsLoading(true);
-        try {
-            const [mealsData, categoriesData] = await Promise.all([
-                adminClient.getMeals(),
-                adminClient.getCategories()
-            ]);
-
-            setMeals(mealsData);
-            if (categoriesData && categoriesData.length > 0) {
-                setCategories(categoriesData);
-            }
-        } catch (error) {
-            console.error('Failed to fetch meals or categories:', error);
-            toast.error('Failed to load data from server');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const fetchCalendar = async () => {
-        setIsLoading(true);
+        setIsLoadingCalendar(true);
         try {
             const calendarData = await adminClient.getCalendar();
             setWeeklySchedule(calendarData);
         } catch (error) {
             console.error('Failed to fetch calendar:', error);
-            toast.error('Failed to load menu from server');
+            // Silent fail, fallback to mock in render
         } finally {
-            setIsLoading(false);
+            setIsLoadingCalendar(false);
         }
     };
 
-    // Filter Logic
-    const filteredMeals = useMemo(() => {
-        return meals.filter(meal => {
+    // Filter Logic for Meal Plans
+    const filteredPlans = useMemo(() => {
+        return mealPlans.filter(plan => {
             const matchesSearch =
-                meal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                meal.category.toLowerCase().includes(searchTerm.toLowerCase());
+                plan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                plan.description.toLowerCase().includes(searchTerm.toLowerCase());
 
             const matchesFilter =
-                filterCategory === 'All' || meal.category === filterCategory;
+                filterCategory === 'All' || plan.category === filterCategory;
 
             return matchesSearch && matchesFilter;
         });
-    }, [meals, searchTerm, filterCategory]);
-
-    // Category mapping
-    const categoryMapping = useMemo(() => {
-        const map: Record<string, string[]> = {};
-        categories.forEach(cat => {
-            const name = cat.title || cat.name || '';
-            if (name && cat.id) {
-                map[name] = [cat.id];
-            }
-        });
-        return map;
-    }, [categories]);
+    }, [mealPlans, searchTerm, filterCategory]);
 
     const uniqueCategories = useMemo(() => {
-        const cats = new Set(meals.map(m => m.category).filter(Boolean));
+        const cats = new Set(mealPlans.map(p => p.category).filter(Boolean));
         return ['All', ...Array.from(cats)];
-    }, [meals]);
-
-    const handleAddNew = () => {
-        if (!isSuperAdmin) return;
-        setEditingMeal(null);
-        setIsEditorOpen(true);
-    };
-
-    const handleEdit = (meal: Meal) => {
-        if (!isSuperAdmin) return;
-        setEditingMeal(meal);
-        setIsEditorOpen(true);
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!isSuperAdmin) return;
-        if (!confirm('Are you sure you want to delete this meal?')) return;
-
-        try {
-            await adminClient.deleteMeal(id);
-            setMeals(prev => prev.filter(m => m.id !== id));
-            toast.success('Meal deleted successfully');
-        } catch (error) {
-            console.error('Error deleting meal:', error);
-            toast.error('Failed to delete meal');
-        }
-    };
-
-    const handleSaveMeal = async (mealData: Partial<Meal>) => {
-        try {
-            const categoryName = mealData.category || '';
-            const existingIds = categoryMapping[categoryName];
-            const finalCategoryIds = existingIds && existingIds.length > 0 ? existingIds : [];
-
-            const origPrice = Number(mealData.originalPrice || mealData.price || 0);
-            const discPrice = Number(mealData.price || 0);
-            const calcDiscount = origPrice > 0 && discPrice < origPrice
-                ? Number(((origPrice - discPrice) / origPrice * 100).toFixed(2))
-                : 0;
-
-            const payload: AdminMealPlanPayload = {
-                title: mealData.name?.trim() || 'Untitled',
-                name: mealData.name?.trim() || 'Untitled',
-                subTitle: mealData.description?.trim() || "A premium meal plan by Aaharly",
-                description: mealData.description?.trim() || "A premium meal plan by Aaharly",
-                originalPrice: Math.max(0, origPrice),
-                discountedPrice: Math.max(0, discPrice),
-                price: Math.max(0, discPrice),
-                discountPercentage: calcDiscount,
-                duration: Math.max(1, Number(mealData.duration || 28)),
-                mealsPerDay: Math.max(1, Number(mealData.mealsPerDay || 3)),
-                isActive: mealData.status === 'active',
-                categoryIds: finalCategoryIds,
-                coverImageUrl: mealData.image?.trim() || mealData.coverImageUrl?.trim() || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
-            };
-
-            if (editingMeal && editingMeal.id) {
-                const updated = await adminClient.updateMeal(editingMeal.id, payload);
-                setMeals(prev => prev.map(m => m.id === editingMeal.id ? updated : m));
-                toast.success('Meal updated successfully');
-            } else {
-                try {
-                    const created = await adminClient.createMeal(payload);
-                    setMeals(prev => [created, ...prev]);
-                    toast.success('Meal created successfully');
-                } catch (createError: any) {
-                    console.error('Detailed create error:', {
-                        message: createError.message,
-                        stack: createError.stack,
-                        payload: payload
-                    });
-                    throw createError;
-                }
-            }
-            setIsEditorOpen(false);
-            setEditingMeal(null);
-        } catch (error) {
-            console.error('Error:', error);
-            toast.error('Failed to save meal. Check console for details.');
-        }
-    };
-
-
-    const getValidImageUrl = (url?: string) => {
-        if (!url) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c";
-        if (url.startsWith('http') || url.startsWith('data:')) return url;
-        if (url.startsWith('/')) return url;
-        return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c";
-    };
+    }, [mealPlans]);
 
     // Styles
     let gridTemplate = 'minmax(280px, 3fr) 140px 120px 120px 120px 100px';
@@ -309,26 +204,6 @@ export const MealsPage: React.FC = () => {
             gap: '0.5rem',
             boxShadow: '0 4px 12px rgba(255, 122, 24, 0.3)',
         },
-        // List Header
-        listHeader: {
-            display: isMobile ? 'none' : 'grid',
-            gridTemplateColumns: gridTemplate,
-            padding: '0 1.5rem',
-            marginBottom: '0.5rem',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            color: 'var(--text-secondary, #cbd5e1)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px',
-            gap: '1.5rem',
-            alignItems: 'center',
-        },
-        list: {
-            display: 'flex',
-            flexDirection: 'column' as const,
-            gap: '0.75rem',
-            marginBottom: '5rem',
-        },
         // Weekly Menu
         weeklyMenu: {
             display: 'flex',
@@ -378,7 +253,6 @@ export const MealsPage: React.FC = () => {
             padding: '1rem',
         },
         mealTypeBadge: (type: string) => {
-            // Basic colors
             let bg = 'rgba(34, 197, 94, 0.15)', color = '#22c55e'; // Green (General/Lunch)
             const t = type.toLowerCase();
             if (t.includes('fat') || t.includes('breakfast')) { bg = 'rgba(255, 122, 24, 0.15)'; color = '#FF7A18'; }
@@ -415,25 +289,22 @@ export const MealsPage: React.FC = () => {
             color: 'var(--text-muted, rgba(255,255,255,0.6))',
         },
         skeletonRow: {
-            display: 'grid',
-            gridTemplateColumns: gridTemplate,
-            gap: '1rem',
-            padding: '1.5rem',
-            borderRadius: '12px',
+            height: '80px',
+            borderRadius: '16px',
             background: 'rgba(255, 255, 255, 0.03)',
-            alignItems: 'center',
+            marginBottom: '1rem',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
             animation: 'pulse 1.5s infinite',
         }
     };
 
     // Render Weekly Menu View
     const renderWeeklyMenu = () => {
-        // Fallback to mock data if backend calendar is empty
         const schedule = (weeklySchedule && weeklySchedule.length > 0)
             ? weeklySchedule
             : mealScheduleData as any[];
 
-        if (isLoading && (!weeklySchedule || weeklySchedule.length === 0)) {
+        if (isLoadingCalendar && (!weeklySchedule || weeklySchedule.length === 0)) {
             return (
                 <div style={styles.weeklyMenu}>
                     <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }`}</style>
@@ -463,7 +334,7 @@ export const MealsPage: React.FC = () => {
                                 >
                                     <div style={styles.menuMealImage}>
                                         <img
-                                            src={getValidImageUrl(item.mealImage || item.image)}
+                                            src={item.mealImage || item.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"}
                                             alt={item.mealName || item.name}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                         />
@@ -498,7 +369,7 @@ export const MealsPage: React.FC = () => {
             {/* Page Header */}
             <div style={styles.header}>
                 <h2 style={styles.title}>Meal Management</h2>
-                <p style={styles.subtitle}>Manage global food catalog and weekly schedules.</p>
+                <p style={styles.subtitle}>Manage global food catalog and meal plans.</p>
             </div>
 
             {/* Tab Navigation */}
@@ -508,7 +379,7 @@ export const MealsPage: React.FC = () => {
                     onClick={() => setActiveTab('library')}
                 >
                     <List size={18} />
-                    Meal Library
+                    Meal Plans
                 </button>
                 <button
                     style={styles.tabBtn(activeTab === 'menu')}
@@ -519,7 +390,7 @@ export const MealsPage: React.FC = () => {
                 </button>
             </div>
 
-            {/* Library View */}
+            {/* Library View (Accordion) */}
             {activeTab === 'library' && (
                 <>
                     {/* Controls Row */}
@@ -528,7 +399,7 @@ export const MealsPage: React.FC = () => {
                             <Search style={styles.searchIcon} size={20} />
                             <input
                                 type="text"
-                                placeholder="Search meals..."
+                                placeholder="Search meal plans..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 style={styles.searchInput}
@@ -546,82 +417,64 @@ export const MealsPage: React.FC = () => {
                         </select>
 
                         {isSuperAdmin && (
-                            <button style={styles.btnAdd} onClick={handleAddNew}>
+                            <button style={styles.btnAdd} onClick={addPlan}>
                                 <Plus size={20} />
-                                Add New Meal
+                                Add Plan
                             </button>
                         )}
                     </div>
 
-                    {/* List Header */}
-                    {!isMobile && (
-                        <div style={styles.listHeader}>
-                            <span>Meal Details</span>
-                            <span>Category</span>
-                            {!isLaptop && <span>Configuration</span>}
-                            <span style={{ textAlign: isLaptop ? 'center' : 'right' as const }}>Pricing</span>
-                            <span style={{ textAlign: 'center' }}>Status</span>
-                            <span style={{ textAlign: 'right' }}>Actions</span>
+                    {/* Meal Plans Accordion */}
+                    {isLoadingPlans ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }`}</style>
+                            {[1, 2, 3].map(i => (
+                                <div key={i} style={styles.skeletonRow}></div>
+                            ))}
                         </div>
+                    ) : filteredPlans.length === 0 ? (
+                        <div style={styles.emptyState}>
+                            <Utensils size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.3 }} />
+                            <h3 style={{ ...styles.title, marginBottom: '0.5rem' }}>No meal plans found</h3>
+                            <p style={{ margin: '0 0 1.5rem 0' }}>
+                                {searchTerm || filterCategory !== 'All'
+                                    ? 'Try adjusting your filters'
+                                    : 'Create your first meal plan to get started'}
+                            </p>
+                            {isSuperAdmin && !searchTerm && filterCategory === 'All' && (
+                                <button style={styles.btnAdd} onClick={addPlan}>
+                                    <Plus size={20} />
+                                    Add First Plan
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <MealPlanAccordion
+                            plans={filteredPlans}
+                            expandedPlanId={expandedPlanId}
+                            onToggle={toggleAccordion}
+                            onAddMeal={openAddMealDrawer}
+                            onEditMeal={openEditMealDrawer}
+                            onDeleteMeal={deleteMeal}
+                            onDeletePlan={deletePlan}
+                            onEditPlan={editPlan}
+                            loadingPlanIds={loadingPlanIds}
+                            onToggleMealActive={toggleMealActive}
+                        />
                     )}
 
-                    {/* Meals List */}
-                    <div style={styles.list}>
-                        {isLoading ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }`}</style>
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <div key={i} style={styles.skeletonRow}></div>
-                                ))}
-                            </div>
-                        ) : filteredMeals.length > 0 ? (
-                            filteredMeals.map(meal => (
-                                <MealRow
-                                    key={meal.id}
-                                    meal={meal}
-                                    onEdit={handleEdit}
-                                    onDelete={handleDelete}
-                                    isLaptop={isLaptop}
-                                    isMobile={isMobile}
-                                />
-                            ))
-                        ) : (
-                            <div style={styles.emptyState}>
-                                <Utensils size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.3 }} />
-                                <h3 style={{ ...styles.title, marginBottom: '0.5rem' }}>No meals found</h3>
-                                <p style={{ margin: '0 0 1.5rem 0' }}>
-                                    {searchTerm || filterCategory !== 'All'
-                                        ? 'Try adjusting your filters'
-                                        : 'Create your first meal to get started'}
-                                </p>
-                                {isSuperAdmin && !searchTerm && filterCategory === 'All' && (
-                                    <button style={styles.btnAdd} onClick={handleAddNew}>
-                                        <Plus size={20} />
-                                        Add First Meal
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    {/* Meal Editor Drawer */}
+                    <MealDrawer
+                        isOpen={isDrawerOpen}
+                        onClose={closeDrawer}
+                        onSave={saveMeal}
+                        initialData={editingMeal}
+                    />
                 </>
             )}
 
             {/* Weekly Menu View */}
             {activeTab === 'menu' && renderWeeklyMenu()}
-
-            {/* Meal Editor Modal */}
-            {isEditorOpen && (
-                <MealEditor
-                    isOpen={isEditorOpen}
-                    onClose={() => {
-                        setIsEditorOpen(false);
-                        setEditingMeal(null);
-                    }}
-                    onSave={handleSaveMeal}
-                    initialData={editingMeal}
-                    categories={categories}
-                />
-            )}
         </div>
     );
 };
