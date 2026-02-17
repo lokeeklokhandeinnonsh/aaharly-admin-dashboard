@@ -16,6 +16,7 @@ import { DispatchCenter } from './pages/vendor/DispatchCenter';
 import { KitchenPrepPage } from './pages/vendor/KitchenPrepPage';
 import { VendorsPage } from './pages/VendorsPage';
 import { CustomersPage } from './pages/vendor/CustomersPage';
+import { VendorQAPage } from './pages/vendor/VendorQAPage';
 
 
 // Guard Component to handle redirections based on auth status and role
@@ -72,6 +73,7 @@ function App() {
               <Route path="vendor/kitchen" element={<KitchenPrepPage />} />
               <Route path="vendor/dispatch" element={<DispatchCenter />} />
               <Route path="vendor/inventory" element={<InventoryPage />} />
+              <Route path="vendor/qa" element={<VendorQAPage />} />
 
               {/* System */}
               <Route path="reports" element={<ReportsPage />} />

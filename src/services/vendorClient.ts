@@ -102,13 +102,30 @@ export const vendorClient = {
     },
 
     // Dashboard
-    getDashboardSummary: async (): Promise<DashboardSummary> => {
-        const response = await axios.get(`${BASE_URL}/vendor/dashboard/summary`, getHeaders());
+    getDashboardSummary: async (date?: string): Promise<DashboardSummary> => {
+        const query = date ? `?date=${date}` : '';
+        const response = await axios.get(`${BASE_URL}/vendor/dashboard/summary${query}`, getHeaders());
         return response.data;
     },
 
     generateDailyBatches: async (date?: string): Promise<DailyProduction> => {
         const response = await axios.post(`${BASE_URL}/vendor/production/generate`, { date }, getHeaders());
         return response.data;
+    },
+
+    // QA & Safety
+    qa: {
+        getChecklist: async (): Promise<any[]> => {
+            const response = await axios.get(`${BASE_URL}/vendor/qa/checklist`, getHeaders());
+            return response.data;
+        },
+        getIssues: async (): Promise<any[]> => {
+            const response = await axios.get(`${BASE_URL}/vendor/qa/issues`, getHeaders());
+            return response.data;
+        },
+        uploadDocument: async (auditId: string, fileUrl: string): Promise<any> => {
+            const response = await axios.post(`${BASE_URL}/vendor/qa/documents`, { audit_id: auditId, file_url: fileUrl }, getHeaders());
+            return response.data;
+        }
     }
 };

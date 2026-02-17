@@ -21,7 +21,9 @@ export const KitchenPrepPage: React.FC = () => {
     const fetchBatches = async () => {
         try {
             setLoading(true);
-            const data = await vendorClient.getDailyProduction();
+            // Get local date string YYYY-MM-DD to ensure we ask for "User's Today"
+            const today = new Date().toLocaleDateString('en-CA');
+            const data = await vendorClient.getDailyProduction(today);
             setBatches(data.batches);
             setError(null);
         } catch (err) {
@@ -39,13 +41,20 @@ export const KitchenPrepPage: React.FC = () => {
     }, []);
 
     const handleMarkComplete = async (batchId: string) => {
-        if (!batchId) return;
+        if (!batchId) {
+            alert('This batch has no ID. Try refreshing the page first to generate batches.');
+            return;
+        }
         try {
             await vendorClient.updateBatchStatus(batchId, 'COMPLETED');
-            setBatches(prev => prev.map(b => b.id === batchId ? { ...b, status: 'COMPLETED' } : b));
-        } catch (err) {
+            setBatches(prev => prev.map(b =>
+                b.id === batchId
+                    ? { ...b, status: 'COMPLETED', completedQuantity: b.targetQuantity }
+                    : b
+            ));
+        } catch (err: any) {
             console.error('Failed to update batch:', err);
-            alert('Status update failed');
+            alert(err?.response?.data?.message || err?.message || 'Status update failed');
         }
     };
 
