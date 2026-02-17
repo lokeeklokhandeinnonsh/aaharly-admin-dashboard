@@ -249,9 +249,43 @@ export const vendorClient = {
     },
 
     // Reports
-    getProductionReports: async (): Promise<ReportResponse[]> => {
-        const response = await fetch(`${API_BASE_URL}/vendor/reports/production`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch reports');
+    getProductionReports: async (startDate?: string, endDate?: string): Promise<ReportResponse[]> => {
+        const params = new URLSearchParams();
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await fetch(`${API_BASE_URL}/vendor/reports/production${query}`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch production reports');
+        return response.json();
+    },
+
+    getInventoryReports: async (startDate?: string, endDate?: string): Promise<ReportResponse[]> => {
+        const params = new URLSearchParams();
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await fetch(`${API_BASE_URL}/vendor/reports/inventory${query}`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch inventory reports');
+        return response.json();
+    },
+
+    getFinanceReports: async (startDate?: string, endDate?: string): Promise<ReportResponse[]> => {
+        const params = new URLSearchParams();
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await fetch(`${API_BASE_URL}/vendor/reports/finance${query}`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch finance reports');
+        return response.json();
+    },
+
+    getDeliveryReports: async (startDate?: string, endDate?: string): Promise<ReportResponse[]> => {
+        const params = new URLSearchParams();
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await fetch(`${API_BASE_URL}/vendor/reports/delivery${query}`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch delivery reports');
         return response.json();
     }
 };

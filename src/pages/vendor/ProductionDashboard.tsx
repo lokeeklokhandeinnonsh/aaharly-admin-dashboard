@@ -4,15 +4,18 @@ import {
     RefreshCw,
     ChevronRight,
     TrendingUp,
-    AlertTriangle,
     Truck,
-    Package
+    Package,
+    XCircle
 } from 'lucide-react';
 import { vendorClient } from '../../services/vendorClient';
 import type { DashboardSummary } from '../../services/vendorClient';
 
 export const ProductionDashboard: React.FC = () => {
-    const [dateRange] = useState('Today, Jan 11');
+    const [dateRange] = useState(() => {
+        const d = new Date();
+        return `Today, ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    });
     const [width, setWidth] = useState(window.innerWidth);
     const [hoveredKpi, setHoveredKpi] = useState<number | null>(null);
     const [data, setData] = useState<DashboardSummary | null>(null);
@@ -28,7 +31,8 @@ export const ProductionDashboard: React.FC = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const summary = await vendorClient.getDashboardSummary();
+            const today = new Date().toLocaleDateString('en-CA');
+            const summary = await vendorClient.getDashboardSummary(today);
             setData(summary);
             setError(null);
         } catch (err) {
@@ -374,7 +378,8 @@ export const ProductionDashboard: React.FC = () => {
     const handleGenerate = async () => {
         try {
             setLoading(true);
-            await vendorClient.generateDailyBatches();
+            const today = new Date().toLocaleDateString('en-CA');
+            await vendorClient.generateDailyBatches(today);
             await fetchData(); // Refresh data
         } catch (err) {
             console.error('Failed to generate batches:', err);
@@ -429,11 +434,11 @@ export const ProductionDashboard: React.FC = () => {
             {/* 1. KPI Summary Row */}
             <div style={styles.kpiRow}>
                 {[
-                    { l: 'Meals Planned', v: kpi.planned, c: 'blue', h: null },
-                    { l: 'Meals Prepared', v: kpi.prepared, c: 'green', h: { t: 'good', i: <TrendingUp size={12} />, tx: `${completeness}% Complete` } },
+                    { l: 'Total Servings', v: kpi.planned, c: 'blue', h: null },
+                    { l: 'Servings Prepared', v: kpi.prepared, c: 'green', h: { t: 'good', i: <TrendingUp size={12} />, tx: `${completeness}% Complete` } },
                     { l: 'Remaining', v: kpi.remaining, c: 'orange', h: { t: 'warn', i: null, tx: 'Target: 4:00 PM' } },
                     { l: 'Ready for Dispatch', v: kpi.dispatchReady, c: 'purple', h: null },
-                    { l: 'Delayed Batches', v: kpi.delayed, c: 'red', h: { t: 'bad', i: <AlertTriangle size={12} />, tx: 'Action Needed' } }
+                    { l: 'Skipped / Cancelled', v: kpi.delayed, c: 'red', h: { t: 'bad', i: <XCircle size={12} />, tx: 'Not Preparing' } }
                 ].map((k, idx) => (
                     <div
                         key={idx}
