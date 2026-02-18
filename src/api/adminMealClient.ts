@@ -175,8 +175,8 @@ export const adminMealClient = {
 
     // Meals (Sub-items)
     getMealsByPlanId: async (planId: string): Promise<Meal[]> => {
-        const response = await fetch(`${API_BASE_URL}/admin/meals/${planId}`, { headers: getHeaders() });
-        // If 404/error, return empty list rather than crash
+        const response = await fetch(`${API_BASE_URL}/admin/meal-plans/${planId}/meals`, { headers: getHeaders() });
+        
         if (!response.ok) return [];
         const result = await response.json();
         return (result.data || result).map(mapMealFromApi);
