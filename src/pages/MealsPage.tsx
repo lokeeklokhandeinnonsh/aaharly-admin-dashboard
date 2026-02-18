@@ -7,7 +7,9 @@ import {
     Utensils,
 } from 'lucide-react';
 import { MealDrawer } from '../components/meals/MealDrawer';
+import { MealPlanDrawer } from '../components/meals/MealPlanDrawer';
 import { MealPlanAccordion } from '../components/meals/MealPlanAccordion';
+import { DeleteConfirmModal } from '../components/meals/DeleteConfirmModal';
 import { useMealAccordion } from '../hooks/useMealAccordion';
 import { Toaster } from 'react-hot-toast';
 import mealScheduleData from '../data/meal_schedule.json';
@@ -18,15 +20,32 @@ export const MealsPage: React.FC = () => {
     const { role } = useAuth();
     const isSuperAdmin = role === 'SUPER_ADMIN';
 
-    // New Hook Integration
+    // Hook Integration
     const {
         mealPlans,
         expandedPlanId,
         loadingPlanIds,
         toggleAccordion,
+        isLoadingPlans,
+
+        // Plan CRUD
         deletePlan,
         editPlan,
         addPlan,
+        savePlan,
+
+        // Plan Drawer
+        isPlanDrawerOpen,
+        editingPlan,
+        closePlanDrawer,
+
+        // Delete Modal
+        deleteModalOpen,
+        isDeleting,
+        confirmDeletePlan,
+        cancelDeletePlan,
+
+        // Meal CRUD
         isDrawerOpen,
         editingMeal,
         openAddMealDrawer,
@@ -35,7 +54,6 @@ export const MealsPage: React.FC = () => {
         saveMeal,
         deleteMeal,
         toggleMealActive,
-        isLoadingPlans
     } = useMealAccordion();
 
     const [activeTab, setActiveTab] = useState<'library' | 'menu'>('library');
@@ -51,7 +69,6 @@ export const MealsPage: React.FC = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const isLaptop = width <= 1024;
     const isMobile = width <= 768;
 
     // Fetch Calendar Data (Only for Menu Tab)
@@ -68,13 +85,12 @@ export const MealsPage: React.FC = () => {
             setWeeklySchedule(calendarData);
         } catch (error) {
             console.error('Failed to fetch calendar:', error);
-            // Silent fail, fallback to mock in render
         } finally {
             setIsLoadingCalendar(false);
         }
     };
 
-    // Filter Logic for Meal Plans
+    // Filter Logic
     const filteredPlans = useMemo(() => {
         return mealPlans.filter(plan => {
             const matchesSearch =
@@ -94,10 +110,6 @@ export const MealsPage: React.FC = () => {
     }, [mealPlans]);
 
     // Styles
-    let gridTemplate = 'minmax(280px, 3fr) 140px 120px 120px 120px 100px';
-    if (isLaptop) gridTemplate = '2fr 140px 1fr 120px 100px';
-    if (isMobile) gridTemplate = '1fr';
-
     const styles = {
         page: {
             display: 'flex',
@@ -122,7 +134,6 @@ export const MealsPage: React.FC = () => {
             color: 'var(--text-muted, rgba(255, 255, 255, 0.6))',
             margin: 0,
         },
-        // Tabs
         tabNav: {
             display: 'flex',
             gap: '0.5rem',
@@ -147,7 +158,6 @@ export const MealsPage: React.FC = () => {
             gap: '0.5rem',
             boxShadow: active ? '0 4px 12px rgba(255, 122, 24, 0.3)' : 'none',
         }),
-        // Controls
         controlsRow: {
             display: 'flex',
             gap: '1rem',
@@ -204,7 +214,6 @@ export const MealsPage: React.FC = () => {
             gap: '0.5rem',
             boxShadow: '0 4px 12px rgba(255, 122, 24, 0.3)',
         },
-        // Weekly Menu
         weeklyMenu: {
             display: 'flex',
             flexDirection: 'column' as const,
@@ -253,7 +262,7 @@ export const MealsPage: React.FC = () => {
             padding: '1rem',
         },
         mealTypeBadge: (type: string) => {
-            let bg = 'rgba(34, 197, 94, 0.15)', color = '#22c55e'; // Green (General/Lunch)
+            let bg = 'rgba(34, 197, 94, 0.15)', color = '#22c55e';
             const t = type.toLowerCase();
             if (t.includes('fat') || t.includes('breakfast')) { bg = 'rgba(255, 122, 24, 0.15)'; color = '#FF7A18'; }
             if (t.includes('gain') || t.includes('dinner')) { bg = 'rgba(59, 130, 246, 0.15)'; color = '#3b82f6'; }
@@ -469,6 +478,24 @@ export const MealsPage: React.FC = () => {
                         onClose={closeDrawer}
                         onSave={saveMeal}
                         initialData={editingMeal}
+                    />
+
+                    {/* Meal Plan Drawer (Create/Edit) */}
+                    <MealPlanDrawer
+                        isOpen={isPlanDrawerOpen}
+                        onClose={closePlanDrawer}
+                        onSave={savePlan}
+                        initialData={editingPlan}
+                    />
+
+                    {/* Delete Confirmation Modal */}
+                    <DeleteConfirmModal
+                        isOpen={deleteModalOpen}
+                        onClose={cancelDeletePlan}
+                        onConfirm={confirmDeletePlan}
+                        isDeleting={isDeleting}
+                        title="Delete Meal Plan"
+                        message="Are you sure you want to delete this plan? This will remove all associated meals from subscriptions."
                     />
                 </>
             )}

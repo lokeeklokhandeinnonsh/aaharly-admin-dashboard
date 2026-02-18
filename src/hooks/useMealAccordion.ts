@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { adminMealClient } from '../api/adminMealClient';
-import type { MealPlan, Meal, CreateMealPayload, UpdateMealPayload } from '../api/adminMealClient';
+import type { MealPlan, Meal, CreateMealPayload, UpdateMealPayload, CreateMealPlanPayload } from '../api/adminMealClient';
 
 export type { MealPlan, Meal };
 
@@ -14,8 +14,16 @@ export const useMealAccordion = () => {
     const [isLoadingPlans, setIsLoadingPlans] = useState(false);
     const [loadingPlanIds, setLoadingPlanIds] = useState<Set<string>>(new Set());
 
-    // Cache for meals to prevent re-fetching (optional, but good for UX)
-    // We update this cache on CRUD operations
+    // Meal Plan Drawer state
+    const [isPlanDrawerOpen, setIsPlanDrawerOpen] = useState(false);
+    const [editingPlan, setEditingPlan] = useState<MealPlan | null>(null);
+
+    // Delete confirmation state
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Meals cache
     const [mealsCache, setMealsCache] = useState<Record<string, Meal[]>>({});
 
     // Fetch Plans on Mount
@@ -36,7 +44,7 @@ export const useMealAccordion = () => {
         }
     };
 
-    // Accordion Logic
+    // ─── Accordion Logic ───
     const toggleAccordion = async (planId: string) => {
         if (expandedPlanId === planId) {
             setExpandedPlanId(null);
@@ -45,7 +53,6 @@ export const useMealAccordion = () => {
 
         setExpandedPlanId(planId);
 
-        // Lazy load meals only if not already in cache or we want to refresh
         if (!mealsCache[planId]) {
             await fetchMealsForPlan(planId);
         }
@@ -65,7 +72,6 @@ export const useMealAccordion = () => {
                 [planId]: meals
             }));
 
-            // Also update the mealPlans state to reflect these meals 
             setMealPlans(prev => prev.map(p =>
                 p.id === planId ? { ...p, meals } : p
             ));
@@ -81,32 +87,86 @@ export const useMealAccordion = () => {
         }
     };
 
-    // Plan Actions
-    const deletePlan = async (planId: string) => {
-        if (!confirm('Are you sure you want to delete this meal plan?')) return;
+    // ─── Plan CRUD ───
 
+    // Delete Plan — open modal instead of confirm()
+    const requestDeletePlan = useCallback((planId: string) => {
+        setDeletingPlanId(planId);
+        setDeleteModalOpen(true);
+    }, []);
+
+    const confirmDeletePlan = async () => {
+        if (!deletingPlanId) return;
+        setIsDeleting(true);
         try {
-            await adminMealClient.deleteMealPlan(planId);
-            setMealPlans(prev => prev.filter(p => p.id !== planId));
-            if (expandedPlanId === planId) setExpandedPlanId(null);
+            await adminMealClient.deleteMealPlan(deletingPlanId);
+            setMealPlans(prev => prev.filter(p => p.id !== deletingPlanId));
+            if (expandedPlanId === deletingPlanId) setExpandedPlanId(null);
+            // Clear cache
+            setMealsCache(prev => {
+                const next = { ...prev };
+                delete next[deletingPlanId!];
+                return next;
+            });
             toast.success('Meal plan deleted');
         } catch (error) {
             console.error(error);
             toast.error('Failed to delete meal plan');
+        } finally {
+            setIsDeleting(false);
+            setDeleteModalOpen(false);
+            setDeletingPlanId(null);
         }
     };
 
-    const editPlan = (_planId: string) => {
-        toast('Edit Plan feature coming soon!', { icon: '🚧' });
-        // Can open a PlanDrawer here if needed
+    const cancelDeletePlan = () => {
+        setDeleteModalOpen(false);
+        setDeletingPlanId(null);
     };
 
-    const addPlan = () => {
-        toast('Add Plan feature coming soon!', { icon: '🚧' });
-        // Can open a PlanDrawer here if needed
+    // Edit Plan — open PlanDrawer with data
+    const editPlan = useCallback((planId: string) => {
+        const plan = mealPlans.find(p => p.id === planId);
+        if (plan) {
+            setEditingPlan(plan);
+            setIsPlanDrawerOpen(true);
+        }
+    }, [mealPlans]);
+
+    // Add Plan — open PlanDrawer empty
+    const addPlan = useCallback(() => {
+        setEditingPlan(null);
+        setIsPlanDrawerOpen(true);
+    }, []);
+
+    const closePlanDrawer = () => {
+        setIsPlanDrawerOpen(false);
+        setEditingPlan(null);
     };
 
-    // Meal Actions (Open Drawer)
+    // Save Plan (Create or Update)
+    const savePlan = async (data: CreateMealPlanPayload) => {
+        try {
+            if (editingPlan) {
+                // Update
+                const updated = await adminMealClient.updateMealPlan(editingPlan.id, data);
+                setMealPlans(prev => prev.map(p => p.id === editingPlan.id ? { ...updated, meals: p.meals } : p));
+                toast.success('Meal plan updated successfully');
+            } else {
+                // Create
+                const created = await adminMealClient.createMealPlan(data);
+                setMealPlans(prev => [...prev, created]);
+                toast.success('Meal plan created successfully');
+            }
+            closePlanDrawer();
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to save meal plan');
+            throw error;
+        }
+    };
+
+    // ─── Meal Actions (Open Drawer) ───
     const openAddMealDrawer = (planId: string) => {
         setCurrentPlanId(planId);
         setEditingMeal(null);
@@ -234,7 +294,6 @@ export const useMealAccordion = () => {
         // Optimistic Update
         const newStatus = !currentStatus;
 
-        // Update Helper
         const updateState = (status: boolean) => {
             setMealsCache(prev => ({
                 ...prev,
@@ -267,11 +326,26 @@ export const useMealAccordion = () => {
         expandedPlanId,
         loadingPlanIds,
         toggleAccordion,
-        deletePlan,
+        isLoadingPlans,
+
+        // Plan CRUD (real integration)
+        deletePlan: requestDeletePlan,
         editPlan,
         addPlan,
+        savePlan,
 
-        // Drawer & Meal Actions
+        // Plan Drawer
+        isPlanDrawerOpen,
+        editingPlan,
+        closePlanDrawer,
+
+        // Delete modal
+        deleteModalOpen,
+        isDeleting,
+        confirmDeletePlan,
+        cancelDeletePlan,
+
+        // Meal Drawer & Meal Actions
         isDrawerOpen,
         editingMeal,
         openAddMealDrawer,
@@ -280,6 +354,5 @@ export const useMealAccordion = () => {
         saveMeal,
         deleteMeal,
         toggleMealActive,
-        isLoadingPlans
     };
 };
