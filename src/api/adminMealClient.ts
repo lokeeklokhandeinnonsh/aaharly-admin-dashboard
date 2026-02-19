@@ -23,6 +23,7 @@ export interface MealPlan {
     price: number;
     status: 'Active' | 'Inactive' | 'Draft';
     meals: Meal[];
+    mealPreference: 'veg' | 'non-veg' | 'both';
 }
 
 export interface CreateMealPlanPayload {
@@ -33,6 +34,7 @@ export interface CreateMealPlanPayload {
     category: string;
     price: number;
     status: 'Active' | 'Inactive' | 'Draft';
+    mealPreference: 'veg' | 'non-veg' | 'both';
 }
 
 export interface UpdateMealPlanPayload extends Partial<CreateMealPlanPayload> { }
@@ -69,6 +71,7 @@ export const adminMealClient = {
             price: plan.price || plan.discountedPrice,
             status: plan.status ? (plan.status.charAt(0).toUpperCase() + plan.status.slice(1)) : (plan.isActive ? 'Active' : 'Inactive'),
             meals: [],
+            mealPreference: plan.mealPreference || 'both',
         }));
     },
 
@@ -87,6 +90,7 @@ export const adminMealClient = {
             price: plan.price || plan.discountedPrice,
             status: plan.status ? (plan.status.charAt(0).toUpperCase() + plan.status.slice(1)) : (plan.isActive ? 'Active' : 'Inactive'),
             meals: plan.meals ? plan.meals.map(mapMealFromApi) : [],
+            mealPreference: plan.mealPreference || 'both',
         };
     },
 
@@ -102,6 +106,7 @@ export const adminMealClient = {
             originalPrice: Number(data.price),
             isActive: data.status === 'Active',
             status: data.status.toLowerCase(),
+            mealPreference: data.mealPreference,
         };
 
         const response = await fetch(`${API_BASE_URL}/admin/meal-plans`, {
@@ -122,6 +127,7 @@ export const adminMealClient = {
             price: plan.price || plan.discountedPrice,
             status: plan.status ? (plan.status.charAt(0).toUpperCase() + plan.status.slice(1)) : (plan.isActive ? 'Active' : 'Inactive'),
             meals: [],
+            mealPreference: plan.mealPreference || 'both',
         };
     },
 
@@ -143,6 +149,7 @@ export const adminMealClient = {
             payload.isActive = data.status === 'Active';
             payload.status = data.status.toLowerCase();
         }
+        if (data.mealPreference) payload.mealPreference = data.mealPreference;
 
         const response = await fetch(`${API_BASE_URL}/admin/meal-plans/${id}`, {
             method: 'PUT',
@@ -162,6 +169,7 @@ export const adminMealClient = {
             price: plan.price || plan.discountedPrice,
             status: plan.status ? (plan.status.charAt(0).toUpperCase() + plan.status.slice(1)) : (plan.isActive ? 'Active' : 'Inactive'),
             meals: plan.meals ? plan.meals.map(mapMealFromApi) : [],
+            mealPreference: plan.mealPreference || 'both',
         };
     },
 
@@ -176,7 +184,7 @@ export const adminMealClient = {
     // Meals (Sub-items)
     getMealsByPlanId: async (planId: string): Promise<Meal[]> => {
         const response = await fetch(`${API_BASE_URL}/admin/meal-plans/${planId}/meals`, { headers: getHeaders() });
-        
+
         if (!response.ok) return [];
         const result = await response.json();
         return (result.data || result).map(mapMealFromApi);

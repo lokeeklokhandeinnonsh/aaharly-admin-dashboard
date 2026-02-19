@@ -62,6 +62,7 @@ const defaultFormData: CreateMealPlanPayload = {
     category: 'General',
     price: 0,
     status: 'Active',
+    mealPreference: 'both',
 };
 
 export const MealPlanDrawer: React.FC<MealPlanDrawerProps> = ({ isOpen, onClose, onSave, initialData }) => {
@@ -78,6 +79,7 @@ export const MealPlanDrawer: React.FC<MealPlanDrawerProps> = ({ isOpen, onClose,
                 category: initialData.category,
                 price: initialData.price,
                 status: initialData.status,
+                mealPreference: initialData.mealPreference || 'both',
             });
         } else {
             setFormData(defaultFormData);
@@ -299,6 +301,20 @@ export const MealPlanDrawer: React.FC<MealPlanDrawerProps> = ({ isOpen, onClose,
                                                 onBlur={blurStyle}
                                             />
                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={labelStyle}>Meal Preference</label>
+                                        <select
+                                            name="mealPreference"
+                                            value={formData.mealPreference}
+                                            onChange={handleChange}
+                                            style={inputStyle}
+                                        >
+                                            <option value="veg" style={{ background: '#0f172a' }}>Veg</option>
+                                            <option value="non-veg" style={{ background: '#0f172a' }}>Non-Veg</option>
+                                            <option value="both" style={{ background: '#0f172a' }}>Both (Veg & Non-Veg)</option>
+                                        </select>
                                     </div>
                                 </div>
 

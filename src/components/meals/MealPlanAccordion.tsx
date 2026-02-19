@@ -92,7 +92,7 @@ const MealPlanCard: React.FC<MealPlanCardProps> = ({
         header: {
             padding: '1.5rem',
             display: 'grid',
-            gridTemplateColumns: 'minmax(200px, 2fr) 1fr 1fr 1fr 1fr 100px 40px',
+            gridTemplateColumns: 'minmax(200px, 2fr) 1fr 1fr 1fr 1fr 1fr 100px 40px',
             alignItems: 'center',
             cursor: 'pointer',
             gap: '1rem',
@@ -225,6 +225,24 @@ const MealPlanCard: React.FC<MealPlanCardProps> = ({
                 <div style={styles.meta}>
                     <span style={styles.label}>Price</span>
                     <span style={styles.price}>{formatPrice(plan.price)}</span>
+                </div>
+
+                <div style={styles.meta}>
+                    <span style={styles.label}>Diet</span>
+                    <div style={{
+                        ...styles.badge,
+                        background: plan.mealPreference === 'veg' ? 'rgba(34, 197, 94, 0.15)' :
+                            plan.mealPreference === 'non-veg' ? 'rgba(239, 68, 68, 0.15)' :
+                                'rgba(249, 115, 22, 0.15)',
+                        color: plan.mealPreference === 'veg' ? '#22c55e' :
+                            plan.mealPreference === 'non-veg' ? '#ef4444' :
+                                '#f97316',
+                        borderColor: plan.mealPreference === 'veg' ? 'rgba(34, 197, 94, 0.3)' :
+                            plan.mealPreference === 'non-veg' ? 'rgba(239, 68, 68, 0.3)' :
+                                'rgba(249, 115, 22, 0.3)',
+                    }}>
+                        {plan.mealPreference?.replace('-', ' ').toUpperCase() || 'BOTH'}
+                    </div>
                 </div>
 
                 <div style={styles.badge}>
