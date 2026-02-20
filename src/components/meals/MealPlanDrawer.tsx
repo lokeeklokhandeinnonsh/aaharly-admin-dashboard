@@ -57,11 +57,13 @@ const inputStyle: React.CSSProperties = {
 const defaultFormData: CreateMealPlanPayload = {
     name: '',
     description: '',
-    duration: 7,
+    duration: 'weekly',
     mealsPerDay: 3,
     category: 'General',
     price: 0,
     status: 'Active',
+    planGoal: 'balanced',
+    mealPreference: 'both',
 };
 
 export const MealPlanDrawer: React.FC<MealPlanDrawerProps> = ({ isOpen, onClose, onSave, initialData }) => {
@@ -78,6 +80,8 @@ export const MealPlanDrawer: React.FC<MealPlanDrawerProps> = ({ isOpen, onClose,
                 category: initialData.category,
                 price: initialData.price,
                 status: initialData.status,
+                planGoal: initialData.planGoal || 'balanced',
+                mealPreference: initialData.mealPreference || 'both',
             });
         } else {
             setFormData(defaultFormData);
@@ -273,17 +277,17 @@ export const MealPlanDrawer: React.FC<MealPlanDrawerProps> = ({ isOpen, onClose,
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                         <div>
-                                            <label style={labelStyle}>Duration (Days)</label>
-                                            <input
-                                                type="number"
+                                            <label style={labelStyle}>Duration</label>
+                                            <select
                                                 name="duration"
-                                                min={1}
                                                 value={formData.duration}
                                                 onChange={handleChange}
                                                 style={inputStyle}
-                                                onFocus={focusStyle}
-                                                onBlur={blurStyle}
-                                            />
+                                            >
+                                                <option value="weekly" style={{ background: '#0f172a' }}>7 Days (Weekly)</option>
+                                                <option value="15_days" style={{ background: '#0f172a' }}>15 Days</option>
+                                                <option value="monthly" style={{ background: '#0f172a' }}>30 Days (Monthly)</option>
+                                            </select>
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Meals Per Day</label>
@@ -298,6 +302,36 @@ export const MealPlanDrawer: React.FC<MealPlanDrawerProps> = ({ isOpen, onClose,
                                                 onFocus={focusStyle}
                                                 onBlur={blurStyle}
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div>
+                                            <label style={labelStyle}>Plan Goal</label>
+                                            <select
+                                                name="planGoal"
+                                                value={formData.planGoal}
+                                                onChange={handleChange}
+                                                style={inputStyle}
+                                            >
+                                                <option value="balanced" style={{ background: '#0f172a' }}>Balanced</option>
+                                                <option value="loss" style={{ background: '#0f172a' }}>Weight Loss</option>
+                                                <option value="gain" style={{ background: '#0f172a' }}>Weight Gain</option>
+                                                <option value="maintain" style={{ background: '#0f172a' }}>Maintenance</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={labelStyle}>Meal Preference</label>
+                                            <select
+                                                name="mealPreference"
+                                                value={formData.mealPreference}
+                                                onChange={handleChange}
+                                                style={inputStyle}
+                                            >
+                                                <option value="both" style={{ background: '#0f172a' }}>Veg & Non-Veg</option>
+                                                <option value="veg" style={{ background: '#0f172a' }}>Veg Only</option>
+                                                <option value="non-veg" style={{ background: '#0f172a' }}>Non-Veg Only</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>

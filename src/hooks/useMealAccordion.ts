@@ -66,7 +66,8 @@ export const useMealAccordion = () => {
         });
 
         try {
-            const meals = await adminMealClient.getMealsByPlanId(planId);
+            const plan = await adminMealClient.getMealPlanById(planId);
+            const meals = plan.meals || [];
             setMealsCache(prev => ({
                 ...prev,
                 [planId]: meals
